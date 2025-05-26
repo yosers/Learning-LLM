@@ -1,0 +1,13 @@
+version: "2"
+servers:
+- engine: postgresql
+  uri: ${DATABASE_URI}
+sql:
+  - engine: "postgresql"
+    queries: "./db/queries/*.sql"
+    schema: "./db/migration/"
+    gen:
+      go:
+        package: "db"
+        out: "./db/sqlc"
+        sql_package: "pgx/v5"

@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"shofy/app/api/router"
+	"shofy/app/api/server"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,13 +15,17 @@ import (
 )
 
 var (
-	srv    *server.Server
-	router *gin.Engine
-	ctx    context.Context
+	//      *server.Server
+	apiRouter *gin.Engine
+	ctx       context.Context
+	srv       *server.Server
 )
 
 func initServer(ctx context.Context) {
 	gotenv.Load()
+
+	srv = server.NewServer(ctx)
+	apiRouter = router.InitRouter(ctx, srv)
 }
 
 func main() {
@@ -29,7 +35,7 @@ func main() {
 
 	httpServer := &http.Server{
 		Addr:    ":8080",
-		Handler: router,
+		Handler: apiRouter,
 	}
 	go func() {
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
