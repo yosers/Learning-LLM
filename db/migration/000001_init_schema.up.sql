@@ -109,3 +109,11 @@ CREATE TABLE order_items (
     quantity INT NOT NULL,
     unit_price DECIMAL(10,2) NOT NULL
 );
+
+-- user login otp
+create table user_login_otp(
+	id SERIAL PRIMARY KEY,
+	user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	otp char(4) NOT NULL,
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
