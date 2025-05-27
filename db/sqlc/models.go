@@ -57,6 +57,8 @@ type Product struct {
 	Price       pgtype.Numeric
 	Stock       pgtype.Int4
 	CreatedAt   pgtype.Timestamp
+	UpdatedAt   pgtype.Timestamp
+	DeletedAt   pgtype.Timestamp
 }
 
 type Role struct {
@@ -104,6 +106,13 @@ type User struct {
 	CreatedAt        pgtype.Timestamptz
 	UpdatedAt        pgtype.Timestamptz
 	Slug             pgtype.UUID
+}
+
+type UserLoginOtp struct {
+	ID        int32
+	UserID    int32
+	Otp       string
+	CreatedAt pgtype.Timestamp
 }
 
 type UserProfile struct {
