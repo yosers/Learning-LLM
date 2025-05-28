@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 	"shofy/app/api/server"
+	categoryHandler "shofy/modules/categories/handler"
+	categoryService "shofy/modules/categories/service"
 	chatHandler "shofy/modules/chat/handler"
 	productHandler "shofy/modules/product/handler"
 	"shofy/modules/product/service"
@@ -22,8 +24,12 @@ func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 	chatRouter.InitRoutes(v1Router)
 
 	productService := service.NewProductService(srv.DBPool)
-	handler := productHandler.NewProductHandler(productService)
-	handler.InitRoutes(v1Router)
+	productHandler := productHandler.NewProductHandler(productService)
+	productHandler.InitRoutes(v1Router)
+
+	categoryService := categoryService.NewCategoryService(srv.DBPool)
+	categoryHandler := categoryHandler.NewCategoryHandler(categoryService)
+	categoryHandler.InitRoutes(v1Router)
 
 	return router
 }

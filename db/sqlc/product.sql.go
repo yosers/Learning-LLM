@@ -173,9 +173,3 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]L
 	}
 	return items, nil
 }
-
-func (q *Queries) CountProducts(ctx context.Context) (int64, error) {
-	var count int64
-	err := q.db.QueryRow(ctx, "SELECT COUNT(*) FROM products WHERE deleted_at IS NULL").Scan(&count)
-	return count, err
-}
