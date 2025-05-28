@@ -68,6 +68,19 @@ func (q *Queries) GetAllProducts(ctx context.Context) ([]GetAllProductsRow, erro
 	return items, nil
 }
 
+const getCountProduct = `-- name: GetCountProduct :one
+SELECT COUNT(*) 
+FROM products 
+WHERE deleted_at IS NULL
+`
+
+func (q *Queries) GetCountProduct(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, getCountProduct)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getProductByID = `-- name: GetProductByID :one
 SELECT id, 
        name, 
@@ -172,10 +185,4 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]L
 		return nil, err
 	}
 	return items, nil
-}
-
-func (q *Queries) CountProducts(ctx context.Context) (int64, error) {
-	var count int64
-	err := q.db.QueryRow(ctx, "SELECT COUNT(*) FROM products WHERE deleted_at IS NULL").Scan(&count)
-	return count, err
 }

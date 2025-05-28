@@ -58,7 +58,7 @@ func (s *productService) ListProducts(ctx context.Context, limit, offset int32, 
 		return nil, err
 	}
 
-	total, err := s.queries.CountProducts(ctx)
+	total, err := s.queries.GetCountProduct(ctx)
 	if err != nil {
 		return nil, err
 	}
