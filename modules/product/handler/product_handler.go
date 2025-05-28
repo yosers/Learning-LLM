@@ -46,17 +46,24 @@ func (h *ProductHandler) GetProductByID(c *gin.Context) {
 }
 
 func (h *ProductHandler) ListProducts(c *gin.Context) {
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "3"))
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	offset := (page - 1) * limit
 
-	products, err := h.productService.ListProducts(c.Request.Context(), int32(limit), int32(offset))
+	result, err := h.productService.ListProducts(c.Request.Context(), int32(limit), int32(offset), page)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	response.Success(c, http.StatusOK, "Products retrieved successfully", products)
+	response.Success(c, http.StatusOK, "Products retrieved successfully", gin.H{
+		"message":      "Products retrieved successfully",
+		"data":         result.Items,
+		"total_items":  result.TotalItems,
+		"total_pages":  result.TotalPages,
+		"current_page": result.CurrentPage,
+		"limit":        result.Limit,
+	})
 }
 
 func (h *ProductHandler) GetAllProducts(c *gin.Context) {
