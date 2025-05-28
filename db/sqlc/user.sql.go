@@ -66,6 +66,29 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 	return err
 }
 
+const getPhoneNumber = `-- name: GetPhoneNumber :one
+SELECT id, shop_id, email, unconfirmed_email, phone, unconfirmed_phone, is_active, created_at, updated_at, slug FROM users
+WHERE phone = $1 LIMIT 1
+`
+
+func (q *Queries) GetPhoneNumber(ctx context.Context, phone pgtype.Text) (User, error) {
+	row := q.db.QueryRow(ctx, getPhoneNumber, phone)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.ShopID,
+		&i.Email,
+		&i.UnconfirmedEmail,
+		&i.Phone,
+		&i.UnconfirmedPhone,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Slug,
+	)
+	return i, err
+}
+
 const getUser = `-- name: GetUser :one
 SELECT id, shop_id, email, unconfirmed_email, phone, unconfirmed_phone, is_active, created_at, updated_at, slug FROM users
 WHERE id = $1 LIMIT 1

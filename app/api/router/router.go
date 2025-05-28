@@ -6,7 +6,9 @@ import (
 	"shofy/app/api/server"
 	chatHandler "shofy/modules/chat/handler"
 	productHandler "shofy/modules/product/handler"
-	"shofy/modules/product/service"
+	pdService "shofy/modules/product/service"
+	usHandler "shofy/modules/users/handler"
+	usService "shofy/modules/users/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,9 +23,13 @@ func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 	chatRouter := chatHandler.NewChatAPIRoutes(ctx, srv)
 	chatRouter.InitRoutes(v1Router)
 
-	productService := service.NewProductService(srv.DBPool)
+	productService := pdService.NewProductService(srv.DBPool)
 	handler := productHandler.NewProductHandler(productService)
 	handler.InitRoutes(v1Router)
+
+	userService := usService.NewUserService(srv.DBPool)
+	userHandler := usHandler.NewUserHandler(userService)
+	userHandler.InitRoutes(v1Router)
 
 	return router
 }

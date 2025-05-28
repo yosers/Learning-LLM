@@ -32,3 +32,7 @@ RETURNING *;
 -- name: DeleteUser :exec
 DELETE FROM users
 WHERE id = $1;
+
+-- name: GetPhoneNumber :one
+SELECT * FROM users
+WHERE phone = $1 LIMIT 1;
