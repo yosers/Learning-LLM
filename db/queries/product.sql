@@ -39,3 +39,9 @@ SELECT id,
 FROM products
 WHERE deleted_at IS NULL
 ORDER BY created_at DESC; 
+
+
+-- name: GetCountProduct :one
+SELECT COUNT(*) 
+FROM products 
+WHERE deleted_at IS NULL;
