@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"shofy/app/api/server"
+	"shofy/middleware"
 	chatHandler "shofy/modules/chat/handler"
 	productHandler "shofy/modules/product/handler"
 	pdService "shofy/modules/product/service"
@@ -16,20 +17,29 @@ import (
 func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 	router := gin.Default()
 
+	// Public endpoints
 	router.GET("/health", healthCheck)
 
 	v1Router := router.Group("/v1")
 
-	chatRouter := chatHandler.NewChatAPIRoutes(ctx, srv)
-	chatRouter.InitRoutes(v1Router)
-
-	productService := pdService.NewProductService(srv.DBPool)
-	handler := productHandler.NewProductHandler(productService)
-	handler.InitRoutes(v1Router)
-
+	// Public routes
 	userService := usService.NewUserService(srv.DBPool)
 	userHandler := usHandler.NewUserHandler(userService)
 	userHandler.InitRoutes(v1Router)
+
+	// Chat routes
+	chatRouter := chatHandler.NewChatAPIRoutes(ctx, srv)
+	chatRouter.InitRoutes(v1Router)
+
+	// Protected routes
+	protectedRoutes := v1Router.Group("")
+	protectedRoutes.Use(middleware.AuthMiddleware())
+	{
+		// Product routes
+		productService := pdService.NewProductService(srv.DBPool)
+		productHandler := productHandler.NewProductHandler(productService)
+		productHandler.InitRoutes(protectedRoutes.Group("/products"))
+	}
 
 	return router
 }

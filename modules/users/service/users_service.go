@@ -16,8 +16,9 @@ import (
 )
 
 type UserService interface {
-	GetUserPhoneNumber(ctx context.Context, phoneNumber pgtype.Text) (*PhoneNumberResponse, error)
+	GenerateOTPByPhone(ctx context.Context, phoneNumber pgtype.Text) (*PhoneNumberResponse, error)
 	VerifyOTP(ctx context.Context, otp string, userId int) (*VerifyOTPResponse, error)
+	Logout(ctx context.Context, token string) error
 }
 
 func NewUserService(dbPool *pgxpool.Pool) UserService {
@@ -34,16 +35,18 @@ type PhoneNumberResponse struct {
 	Phone_number string `json:"phone_number"`
 	Status       bool   `json:"status"`
 	Otp          string `json:"otp"`
+	Remarks      string `json:"remarks"`
 }
 
 type VerifyOTPResponse struct {
-	Token string   `json:"token"`
-	User  *db.User `json:"user"`
+	Token string `json:"token"`
+	//User  *db.User `json:"user"`
+	Email string `json:"email"`
+	Phone string `json:"phone"`
 }
 
-func (s *userService) GetUserPhoneNumber(ctx context.Context, phoneNumber pgtype.Text) (*PhoneNumberResponse, error) {
-	items, err := s.queries.GetPhoneNumber(ctx, phoneNumber)
-	log.Println("log ini pasti muncul")
+func (s *userService) GenerateOTPByPhone(ctx context.Context, phoneNumber pgtype.Text) (*PhoneNumberResponse, error) {
+	items, err := s.queries.FindUserByPhone(ctx, phoneNumber)
 
 	if err != nil {
 		log.Println("Error fetching phone number:", err)
@@ -77,20 +80,50 @@ func (s *userService) GetUserPhoneNumber(ctx context.Context, phoneNumber pgtype
 		log.Fatal(err)
 	}
 
-	// Simpan OTP ke database
-	err = s.queries.InsertUserLoginOtp(ctx, db.InsertUserLoginOtpParams{
-		UserID: items.ID,
-		Otp:    otp,
-	})
+	// Simpan atau update OTP ke database
+	dataUser, err := s.queries.FindUserLoginOtpByPhone(ctx, phoneNumber)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// Jika tidak ada OTP sebelumnya, insert OTP baru
+			err = s.queries.InsertUserLoginOtp(ctx, db.InsertUserLoginOtpParams{
+				UserID: items.ID,
+				Otp:    otp,
+			})
+			if err != nil {
+				log.Println("Error inserting OTP to database:", err)
+				return nil, fmt.Errorf("failed to store OTP: %w", err)
+			}
+		}
+	} else {
+		if dataUser.IsUsed.Valid && !dataUser.IsUsed.Bool {
+			// Jika OTP sudah ada, update OTP
+			err = s.queries.UpdateIsUsed(ctx, db.UpdateIsUsedParams{
+				UserID: int32(dataUser.UserID),
+				Otp:    otp,
+			})
+
+			if err != nil {
+				log.Println("Error updating OTP in database:", err)
+				return nil, fmt.Errorf("failed to update OTP: %w", err)
+			}
+		} else {
+			return &PhoneNumberResponse{
+				Phone_number: resultPhone,
+				Status:       true,
+				Remarks:      "User already logged",
+			}, nil
+		}
+	}
 
 	if err != nil {
+		log.Println("Error Simpan OTP ke database:", err)
 		return nil, fmt.Errorf("failed to store OTP: %w", err)
 	}
 
 	return &PhoneNumberResponse{
 		Phone_number: resultPhone,
 		Status:       flag,
-		Otp:          otp, // Dummy OTP sementara
+		Otp:          otp,
 	}, nil
 }
 
@@ -128,6 +161,17 @@ func (s *userService) VerifyOTP(ctx context.Context, otp string, userId int) (*V
 		return nil, errors.New("OTP not found or invalid")
 	}
 
+	// Mark OTP as used
+	err = s.queries.UpdateIsUsed(ctx, db.UpdateIsUsedParams{
+		UserID: int32(userId),
+		Otp:    otp,
+	})
+
+	if err != nil {
+		log.Println("Error update OTP:", err)
+		return nil, fmt.Errorf("failed to update OTP: %w", err)
+	}
+
 	// Get user data
 	user, err := s.queries.GetUser(ctx, otpData.UserID)
 	if err != nil {
@@ -144,6 +188,17 @@ func (s *userService) VerifyOTP(ctx context.Context, otp string, userId int) (*V
 
 	return &VerifyOTPResponse{
 		Token: token,
-		User:  &user,
+		Email: user.Email.String,
+		Phone: user.Phone.String,
 	}, nil
+}
+
+func (s *userService) Logout(ctx context.Context, token string) error {
+	// Invalidate the token
+	if err := jwt.InvalidateToken(token); err != nil {
+		log.Println("Error invalidating token:", err)
+		return fmt.Errorf("failed to invalidate token: %w", err)
+	}
+
+	return nil
 }
