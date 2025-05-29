@@ -23,3 +23,29 @@ func (q *Queries) InsertUserLoginOtp(ctx context.Context, arg InsertUserLoginOtp
 	_, err := q.db.Exec(ctx, insertUserLoginOtp, arg.UserID, arg.Otp)
 	return err
 }
+
+const verifyOtp = `-- name: VerifyOtp :one
+SELECT id, user_id, otp, is_used, created_at, expires_at FROM user_login_otp
+WHERE user_id = $1 AND otp = $2 AND created_at >= NOW() - INTERVAL '5 minutes'
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+type VerifyOtpParams struct {
+	UserID int32
+	Otp    string
+}
+
+func (q *Queries) VerifyOtp(ctx context.Context, arg VerifyOtpParams) (UserLoginOtp, error) {
+	row := q.db.QueryRow(ctx, verifyOtp, arg.UserID, arg.Otp)
+	var i UserLoginOtp
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Otp,
+		&i.IsUsed,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+	)
+	return i, err
+}

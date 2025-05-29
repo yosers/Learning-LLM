@@ -9,6 +9,7 @@ import (
 	"log"
 	"math/big"
 	db "shofy/db/sqlc"
+	"shofy/utils/jwt"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -16,6 +17,7 @@ import (
 
 type UserService interface {
 	GetUserPhoneNumber(ctx context.Context, phoneNumber pgtype.Text) (*PhoneNumberResponse, error)
+	VerifyOTP(ctx context.Context, otp string, userId int) (*VerifyOTPResponse, error)
 }
 
 func NewUserService(dbPool *pgxpool.Pool) UserService {
@@ -32,6 +34,11 @@ type PhoneNumberResponse struct {
 	Phone_number string `json:"phone_number"`
 	Status       bool   `json:"status"`
 	Otp          string `json:"otp"`
+}
+
+type VerifyOTPResponse struct {
+	Token string   `json:"token"`
+	User  *db.User `json:"user"`
 }
 
 func (s *userService) GetUserPhoneNumber(ctx context.Context, phoneNumber pgtype.Text) (*PhoneNumberResponse, error) {
@@ -102,4 +109,41 @@ func GenerateOTP(length int) (string, error) {
 		otp += n.String()
 	}
 	return otp, nil
+}
+
+func (s *userService) VerifyOTP(ctx context.Context, otp string, userId int) (*VerifyOTPResponse, error) {
+	otpData, err := s.queries.VerifyOtp(ctx, db.VerifyOtpParams{
+		UserID: int32(userId),
+		Otp:    otp,
+	})
+
+	if err != nil {
+		log.Println("Error verifying OTP:", err)
+		return nil, fmt.Errorf("failed to verify OTP: %w", err)
+	}
+
+	if otpData.Otp == "" {
+		log.Println("OTP not found or invalid:", err)
+
+		return nil, errors.New("OTP not found or invalid")
+	}
+
+	// Get user data
+	user, err := s.queries.GetUser(ctx, otpData.UserID)
+	if err != nil {
+		log.Println("failed to get user data:", err)
+		return nil, fmt.Errorf("failed to get user data: %w", err)
+	}
+
+	// Generate JWT token
+	token, err := jwt.GenerateToken(otpData.UserID)
+	if err != nil {
+		log.Println("failed to generate token:", err)
+		return nil, fmt.Errorf("failed to generate token: %w", err)
+	}
+
+	return &VerifyOTPResponse{
+		Token: token,
+		User:  &user,
+	}, nil
 }

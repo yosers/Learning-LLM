@@ -112,7 +112,9 @@ type UserLoginOtp struct {
 	ID        int32
 	UserID    int32
 	Otp       string
+	IsUsed    pgtype.Bool
 	CreatedAt pgtype.Timestamp
+	ExpiresAt pgtype.Timestamp
 }
 
 type UserProfile struct {

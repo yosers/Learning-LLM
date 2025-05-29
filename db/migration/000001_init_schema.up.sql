@@ -118,7 +118,7 @@ create table user_login_otp(
 	user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 	otp char(6) NOT NULL,
     is_used BOOLEAN DEFAULT FALSE,
-	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP DEFAULT (now() + INTERVAL '5 minutes')
 
 );
