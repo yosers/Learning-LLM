@@ -5,17 +5,21 @@ WHERE id = $1 LIMIT 1;
 -- name: ListUsers :many
 SELECT * FROM users
 WHERE shop_id = $1
-ORDER BY created_at DESC;
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
+
+-- name: CountUsers :one
+SELECT COUNT(*) FROM users
+WHERE shop_id = $1;
 
 -- name: CreateUser :one
 INSERT INTO users (
-    id,
     shop_id,
     email,
     phone,
     is_active
 ) VALUES (
-    $1, $2, $3, $4, $5
+    $1, $2, $3, $4
 )
 RETURNING *;
 

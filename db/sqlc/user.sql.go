@@ -11,21 +11,31 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countUsers = `-- name: CountUsers :one
+SELECT COUNT(*) FROM users
+WHERE shop_id = $1
+`
+
+func (q *Queries) CountUsers(ctx context.Context, shopID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, countUsers, shopID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
-    id,
     shop_id,
     email,
     phone,
     is_active
 ) VALUES (
-    $1, $2, $3, $4, $5
+    $1, $2, $3, $4
 )
 RETURNING id, shop_id, email, unconfirmed_email, phone, unconfirmed_phone, is_active, created_at, updated_at, slug
 `
 
 type CreateUserParams struct {
-	ID       int32
 	ShopID   int32
 	Email    pgtype.Text
 	Phone    pgtype.Text
@@ -34,7 +44,6 @@ type CreateUserParams struct {
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, createUser,
-		arg.ID,
 		arg.ShopID,
 		arg.Email,
 		arg.Phone,
@@ -116,10 +125,17 @@ const listUsers = `-- name: ListUsers :many
 SELECT id, shop_id, email, unconfirmed_email, phone, unconfirmed_phone, is_active, created_at, updated_at, slug FROM users
 WHERE shop_id = $1
 ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) ListUsers(ctx context.Context, shopID int32) ([]User, error) {
-	rows, err := q.db.Query(ctx, listUsers, shopID)
+type ListUsersParams struct {
+	ShopID int32
+	Limit  int32
+	Offset int32
+}
+
+func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error) {
+	rows, err := q.db.Query(ctx, listUsers, arg.ShopID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

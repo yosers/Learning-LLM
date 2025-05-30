@@ -31,6 +31,11 @@ func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 	chatRouter := chatHandler.NewChatAPIRoutes(ctx, srv)
 	chatRouter.InitRoutes(v1Router)
 
+	// Product routes (tanpa autentikasi)
+	// productService := pdService.NewProductService(srv.DBPool)
+	// productHandler := productHandler.NewProductHandler(productService)
+	// productHandler.InitRoutes(v1Router.Group("/products"))
+
 	// Protected routes
 	protectedRoutes := v1Router.Group("")
 	protectedRoutes.Use(middleware.AuthMiddleware())
