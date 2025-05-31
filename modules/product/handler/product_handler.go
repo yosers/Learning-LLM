@@ -57,11 +57,11 @@ func (h *ProductHandler) GetProductByID(c *gin.Context) {
 
 func (h *ProductHandler) ListProducts(c *gin.Context) {
 	// Get user ID from context (set by auth middleware)
-	userID, exists := c.Get("user_id")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "User not authenticated")
-		return
-	}
+	// userID, exists := c.Get("user_id")
+	// if !exists {
+	// 	response.Error(c, http.StatusUnauthorized, "User not authenticated")
+	// 	return
+	// }
 
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "3"))
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -74,7 +74,7 @@ func (h *ProductHandler) ListProducts(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusOK, "Products retrieved successfully", gin.H{
-		"user_id":      userID,
+		// "user_id":      userID,
 		"data":         result.Items,
 		"total_items":  result.TotalItems,
 		"total_pages":  result.TotalPages,
@@ -85,11 +85,11 @@ func (h *ProductHandler) ListProducts(c *gin.Context) {
 
 func (h *ProductHandler) GetAllProducts(c *gin.Context) {
 	// Get user ID from context (set by auth middleware)
-	userID, exists := c.Get("user_id")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "User not authenticated")
-		return
-	}
+	// userID, exists := c.Get("user_id")
+	// if !exists {
+	// 	response.Error(c, http.StatusUnauthorized, "User not authenticated")
+	// 	return
+	// }
 
 	products, err := h.productService.GetAllProducts(c.Request.Context())
 	if err != nil {
@@ -98,7 +98,7 @@ func (h *ProductHandler) GetAllProducts(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusOK, "All products retrieved successfully", gin.H{
-		"user_id":  userID,
+		// "user_id":  userID,
 		"products": products,
 	})
 }

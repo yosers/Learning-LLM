@@ -96,7 +96,8 @@ func (q *Queries) UpdateIsUsedFalse(ctx context.Context, userID int32) error {
 
 const updateOTPByUserId = `-- name: UpdateOTPByUserId :exec
 UPDATE user_login_otp
-SET is_used = FALSE, otp = $1
+SET is_used = FALSE, otp = $1, created_at = NOW(), 
+    expires_at = NOW() + INTERVAL '5 minutes'
 WHERE user_id = $2
 `
 
@@ -112,7 +113,10 @@ func (q *Queries) UpdateOTPByUserId(ctx context.Context, arg UpdateOTPByUserIdPa
 
 const verifyOtp = `-- name: VerifyOtp :one
 SELECT id, user_id, otp, is_used, created_at, expires_at FROM user_login_otp
-WHERE user_id = $1 AND otp = $2 AND created_at >= NOW() - INTERVAL '5 minutes' AND is_used = FALSE
+WHERE user_id = $1 
+    AND otp = $2
+    AND expires_at >= (NOW() AT TIME ZONE 'UTC')
+    AND is_used = FALSE
 ORDER BY created_at DESC
 LIMIT 1
 `
