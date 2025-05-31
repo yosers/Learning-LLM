@@ -213,13 +213,12 @@ func (s *userService) VerifyOTP(ctx context.Context, otp string, userId int) (*V
 	})
 
 	if err != nil {
-		log.Println("Error verifying OTP:", err)
-		return nil, fmt.Errorf("failed to verify OTP: %w", err)
+		log.Println("Failed to verify OTP in User Login OTP:", err)
+		return nil, fmt.Errorf("Failed to verify OTP in User Login OTP: %w", err)
 	}
 
 	if otpData.Otp == "" {
 		log.Println("OTP not found or invalid:", err)
-
 		return nil, errors.New("OTP not found or invalid")
 	}
 

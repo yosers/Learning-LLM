@@ -11,7 +11,7 @@ import (
 
 type JWTClaim struct {
 	UserID int32 `json:"user_id"`
-	// Role   string `json:"role"`
+	// Role   []string `json:"role"`
 	jwt.RegisteredClaims
 }
 

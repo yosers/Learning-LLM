@@ -27,12 +27,12 @@ func (h *UserHandler) InitRoutes(router *gin.RouterGroup) {
 	{
 		users.GET("/phone/:phone", h.GenerateOTPByPhone)
 		users.GET("/verify-otp/:otp/:user-id", h.VerifyOTP)
-		users.POST("", h.CreateUser)
-		users.GET("", h.ListUsers)
 
 		protected := users.Group("")
 		protected.Use(middleware.AuthMiddleware())
 		{
+			users.POST("/save", h.CreateUser)
+			users.GET("/list", h.ListUsers)
 			protected.POST("/logout/:user-id", h.Logout)
 			protected.PUT("/:user-id", h.UpdateUser)
 		}
