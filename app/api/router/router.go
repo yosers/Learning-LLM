@@ -4,11 +4,17 @@ import (
 	"context"
 	"net/http"
 	"shofy/app/api/server"
+<<<<<<< HEAD
 	categoryHandler "shofy/modules/categories/handler"
 	categoryService "shofy/modules/categories/service"
+=======
+	"shofy/middleware"
+>>>>>>> 070a8f34864dcfd78b002d2a938a39006bc47545
 	chatHandler "shofy/modules/chat/handler"
 	productHandler "shofy/modules/product/handler"
-	"shofy/modules/product/service"
+	pdService "shofy/modules/product/service"
+	usHandler "shofy/modules/users/handler"
+	usService "shofy/modules/users/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,13 +22,21 @@ import (
 func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 	router := gin.Default()
 
+	// Public endpoints
 	router.GET("/health", healthCheck)
 
 	v1Router := router.Group("/v1")
 
+	// Public routes
+	userService := usService.NewUserService(srv.DBPool)
+	userHandler := usHandler.NewUserHandler(userService)
+	userHandler.InitRoutes(v1Router)
+
+	// Chat routes
 	chatRouter := chatHandler.NewChatAPIRoutes(ctx, srv)
 	chatRouter.InitRoutes(v1Router)
 
+<<<<<<< HEAD
 	productService := service.NewProductService(srv.DBPool)
 	productHandler := productHandler.NewProductHandler(productService)
 	productHandler.InitRoutes(v1Router)
@@ -30,6 +44,17 @@ func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 	categoryService := categoryService.NewCategoryService(srv.DBPool)
 	categoryHandler := categoryHandler.NewCategoryHandler(categoryService)
 	categoryHandler.InitRoutes(v1Router)
+=======
+	// Protected routes
+	protectedRoutes := v1Router.Group("")
+	protectedRoutes.Use(middleware.AuthMiddleware())
+	{
+		// Product routes
+		productService := pdService.NewProductService(srv.DBPool)
+		productHandler := productHandler.NewProductHandler(productService)
+		productHandler.InitRoutes(protectedRoutes.Group("/products"))
+	}
+>>>>>>> 070a8f34864dcfd78b002d2a938a39006bc47545
 
 	return router
 }

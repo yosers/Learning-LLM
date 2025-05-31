@@ -22,6 +22,7 @@ func (h *CategoryHandler) InitRoutes(router *gin.RouterGroup) {
 	categories := router.Group("/categories")
 	{
 		categories.GET("", h.GetAllCategories)
+		categories.DELETE("/:id", h.DeleteCategory)
 	}
 }
 
@@ -31,6 +32,11 @@ func (h *CategoryHandler) GetAllCategories(c *gin.Context) {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	response.Success(c, http.StatusOK, "Successfully retrieved categories", categories)
+}
+
+func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 
 	response.Success(c, http.StatusOK, "Successfully retrieved categories", categories)
 }
