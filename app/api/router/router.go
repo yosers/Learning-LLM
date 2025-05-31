@@ -4,23 +4,33 @@ import (
 	"context"
 	"net/http"
 	"shofy/app/api/server"
-
 	categoryHandler "shofy/modules/categories/handler"
 	categoryService "shofy/modules/categories/service"
-
-	"shofy/middleware"
 
 	chatHandler "shofy/modules/chat/handler"
 	productHandler "shofy/modules/product/handler"
 	pdService "shofy/modules/product/service"
 	usHandler "shofy/modules/users/handler"
 	usService "shofy/modules/users/service"
+	"time"
+
+	"github.com/gin-contrib/cors"
 
 	"github.com/gin-gonic/gin"
 )
 
 func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 	router := gin.Default()
+
+	// ✅ Tambahkan middleware CORS DI SINI
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"}, // FE and BE addresses
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Authorization", "Content-Type"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	// Public endpoints
 	router.GET("/health", healthCheck)
@@ -37,24 +47,23 @@ func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 	chatRouter.InitRoutes(v1Router)
 
 	// Product routes (tanpa autentikasi)
-	// productService := pdService.NewProductService(srv.DBPool)
-	// productHandler := productHandler.NewProductHandler(productService)
-	// productHandler.InitRoutes(v1Router.Group("/products"))
+	productService := pdService.NewProductService(srv.DBPool)
+	productHandler := productHandler.NewProductHandler(productService)
+	productHandler.InitRoutes(v1Router.Group("/products"))
 
 	categoryService := categoryService.NewCategoryService(srv.DBPool)
 	categoryHandler := categoryHandler.NewCategoryHandler(categoryService)
 	categoryHandler.InitRoutes(v1Router.Group("/categories"))
 
 	// Protected routes
-	protectedRoutes := v1Router.Group("")
-	protectedRoutes.Use(middleware.AuthMiddleware())
-	{
-		// Product routes
-		productService := pdService.NewProductService(srv.DBPool)
-		productHandler := productHandler.NewProductHandler(productService)
-		productHandler.InitRoutes(protectedRoutes.Group("/products"))
-
-	}
+	// protectedRoutes := v1Router.Group("")
+	// protectedRoutes.Use(middleware.AuthMiddleware())
+	// {
+	// 	// Product routes
+	// 	productService := pdService.NewProductService(srv.DBPool)
+	// 	productHandler := productHandler.NewProductHandler(productService)
+	// 	productHandler.InitRoutes(protectedRoutes.Group("/products"))
+	// }
 
 	return router
 }
