@@ -135,6 +135,7 @@ func (s *userService) GenerateOTPByPhone(ctx context.Context, phoneNumber pgtype
 
 	// Simpan atau update OTP ke database
 	dataUser, err := s.queries.FindUserLoginOtpByPhone(ctx, phoneNumber)
+	log.Println("Error Simpan OTP ke database:", dataUser)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			log.Println("Masuk", err)
@@ -145,6 +146,7 @@ func (s *userService) GenerateOTPByPhone(ctx context.Context, phoneNumber pgtype
 				Otp:    otp,
 			})
 			if err != nil {
+
 				log.Println("Error inserting OTP to database:", items.ID, otp, err)
 
 				log.Println("Error inserting OTP to database:", err)
