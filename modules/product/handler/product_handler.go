@@ -24,7 +24,9 @@ func (h *ProductHandler) InitRoutes(router *gin.RouterGroup) {
 	// All these routes will inherit the middleware from the group
 	router.GET("/list", h.ListProducts) // Changed from "" to "/list" for clarity
 	router.GET("/all", h.GetAllProducts)
-	router.GET("/detail/:id", h.GetProductByID) // Changed from ":id" to "/detail/:id" for clarity
+	router.GET("/detail/:id", h.GetProductByID)     // Changed from ":id" to "/detail/:id" for clarity
+	router.DELETE("/deleted/:id", h.GetProductByID) // Changed from ":id" to "/detail/:id" for clarity
+
 }
 
 func (h *ProductHandler) GetProductByID(c *gin.Context) {

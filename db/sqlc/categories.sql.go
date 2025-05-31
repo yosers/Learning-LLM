@@ -63,10 +63,16 @@ SELECT id,
        name,
        parent_id 
 FROM categories
+LIMIT $1 OFFSET $2
 `
 
-func (q *Queries) GetAllCategory(ctx context.Context) ([]Category, error) {
-	rows, err := q.db.Query(ctx, getAllCategory)
+type GetAllCategoryParams struct {
+	Limit  int32
+	Offset int32
+}
+
+func (q *Queries) GetAllCategory(ctx context.Context, arg GetAllCategoryParams) ([]Category, error) {
+	rows, err := q.db.Query(ctx, getAllCategory, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +94,70 @@ func (q *Queries) GetAllCategory(ctx context.Context) ([]Category, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const getCategoriesPaginated = `-- name: GetCategoriesPaginated :many
+SELECT id, shop_id, name, parent_id FROM categories
+ORDER BY id
+LIMIT $1 OFFSET $2
+`
+
+type GetCategoriesPaginatedParams struct {
+	Limit  int32
+	Offset int32
+}
+
+type ListCategoriesRow struct {
+	ID          pgtype.Numeric
+	ShopID      pgtype.Numeric
+	Name		pgtype.Text
+	ParentID    pgtype.Numeric
+}
+
+func (q *Queries) GetCategoriesPaginated(ctx context.Context, arg GetCategoriesPaginatedParams) ([]ListCategoriesRow, error) {
+	rows, err := q.db.Query(ctx, getCategoriesPaginated, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCategoriesRow
+	for rows.Next() {
+		var i ListCategoriesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ShopID,
+			&i.Name,
+			&i.ParentID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getCategoryByID = `-- name: GetCategoryByID :one
+SELECT id, 
+       shop_id, 
+       name,
+       parent_id 
+FROM categories
+WHERE id = $1
+`
+
+func (q *Queries) GetCategoryByID(ctx context.Context, id int32) (Category, error) {
+	row := q.db.QueryRow(ctx, getCategoryByID, id)
+	var i Category
+	err := row.Scan(
+		&i.ID,
+		&i.ShopID,
+		&i.Name,
+		&i.ParentID,
+	)
+	return i, err
 }
 
 const updateCategory = `-- name: UpdateCategory :one

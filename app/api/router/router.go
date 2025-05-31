@@ -36,13 +36,14 @@ func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 	chatRouter := chatHandler.NewChatAPIRoutes(ctx, srv)
 	chatRouter.InitRoutes(v1Router)
 
-	// productService := service.NewProductService(srv.DBPool)
+	// Product routes (tanpa autentikasi)
+	// productService := pdService.NewProductService(srv.DBPool)
 	// productHandler := productHandler.NewProductHandler(productService)
-	// productHandler.InitRoutes(v1Router)
+	// productHandler.InitRoutes(v1Router.Group("/products"))
 
 	categoryService := categoryService.NewCategoryService(srv.DBPool)
 	categoryHandler := categoryHandler.NewCategoryHandler(categoryService)
-	categoryHandler.InitRoutes(v1Router)
+	categoryHandler.InitRoutes(v1Router.Group("/categories"))
 
 	// Protected routes
 	protectedRoutes := v1Router.Group("")
@@ -52,6 +53,7 @@ func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 		productService := pdService.NewProductService(srv.DBPool)
 		productHandler := productHandler.NewProductHandler(productService)
 		productHandler.InitRoutes(protectedRoutes.Group("/products"))
+
 	}
 
 	return router

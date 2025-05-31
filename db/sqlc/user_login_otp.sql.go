@@ -12,35 +12,16 @@ import (
 )
 
 const findUserLoginOtpByPhone = `-- name: FindUserLoginOtpByPhone :one
-SELECT ulo.id, user_id, otp, is_used, ulo.created_at, expires_at, u.id, shop_id, email, unconfirmed_email, phone, unconfirmed_phone, is_active, u.created_at, updated_at, slug FROM user_login_otp ulo join users u
+SELECT ulo.id, ulo.user_id, ulo.otp, ulo.is_used, ulo.created_at, ulo.expires_at FROM user_login_otp ulo join users u
 ON ulo.user_id = u.id
-WHERE u.phone = $1 AND is_used = FALSE
+WHERE u.phone = $1
 ORDER BY ulo. created_at DESC
 LIMIT 1
 `
 
-type FindUserLoginOtpByPhoneRow struct {
-	ID               int32
-	UserID           int32
-	Otp              string
-	IsUsed           pgtype.Bool
-	CreatedAt        pgtype.Timestamp
-	ExpiresAt        pgtype.Timestamp
-	ID_2             int32
-	ShopID           int32
-	Email            pgtype.Text
-	UnconfirmedEmail pgtype.Text
-	Phone            pgtype.Text
-	UnconfirmedPhone pgtype.Text
-	IsActive         pgtype.Bool
-	CreatedAt_2      pgtype.Timestamptz
-	UpdatedAt        pgtype.Timestamptz
-	Slug             pgtype.UUID
-}
-
-func (q *Queries) FindUserLoginOtpByPhone(ctx context.Context, phone pgtype.Text) (FindUserLoginOtpByPhoneRow, error) {
+func (q *Queries) FindUserLoginOtpByPhone(ctx context.Context, phone pgtype.Text) (UserLoginOtp, error) {
 	row := q.db.QueryRow(ctx, findUserLoginOtpByPhone, phone)
-	var i FindUserLoginOtpByPhoneRow
+	var i UserLoginOtp
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
@@ -48,16 +29,6 @@ func (q *Queries) FindUserLoginOtpByPhone(ctx context.Context, phone pgtype.Text
 		&i.IsUsed,
 		&i.CreatedAt,
 		&i.ExpiresAt,
-		&i.ID_2,
-		&i.ShopID,
-		&i.Email,
-		&i.UnconfirmedEmail,
-		&i.Phone,
-		&i.UnconfirmedPhone,
-		&i.IsActive,
-		&i.CreatedAt_2,
-		&i.UpdatedAt,
-		&i.Slug,
 	)
 	return i, err
 }
@@ -109,6 +80,33 @@ type UpdateIsUsedParams struct {
 
 func (q *Queries) UpdateIsUsed(ctx context.Context, arg UpdateIsUsedParams) error {
 	_, err := q.db.Exec(ctx, updateIsUsed, arg.UserID, arg.Otp)
+	return err
+}
+
+const updateIsUsedFalse = `-- name: UpdateIsUsedFalse :exec
+UPDATE user_login_otp
+SET is_used = FALSE
+WHERE user_id = $1
+`
+
+func (q *Queries) UpdateIsUsedFalse(ctx context.Context, userID int32) error {
+	_, err := q.db.Exec(ctx, updateIsUsedFalse, userID)
+	return err
+}
+
+const updateOTPByUserId = `-- name: UpdateOTPByUserId :exec
+UPDATE user_login_otp
+SET is_used = FALSE, otp = $1
+WHERE user_id = $2
+`
+
+type UpdateOTPByUserIdParams struct {
+	Otp    string
+	UserID int32
+}
+
+func (q *Queries) UpdateOTPByUserId(ctx context.Context, arg UpdateOTPByUserIdParams) error {
+	_, err := q.db.Exec(ctx, updateOTPByUserId, arg.Otp, arg.UserID)
 	return err
 }
 

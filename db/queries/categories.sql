@@ -3,7 +3,22 @@ SELECT id,
        shop_id, 
        name,
        parent_id 
-FROM categories;
+FROM categories
+LIMIT $1 OFFSET $2;
+
+-- name: GetCategoryByID :one
+SELECT id, 
+       shop_id, 
+       name,
+       parent_id 
+FROM categories
+WHERE id = $1;
+
+-- name: GetCategoriesPaginated :many
+SELECT * FROM categories
+ORDER BY id
+LIMIT $1 OFFSET $2;
+
 
 -- name: CreateCategory :one
 INSERT INTO categories (
