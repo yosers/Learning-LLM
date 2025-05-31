@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"shofy/middleware"
 	"shofy/modules/categories/service"
 	"shofy/utils/response"
 
@@ -19,10 +20,14 @@ func NewCategoryHandler(categoryService service.CategoryService) *CategoryHandle
 }
 
 func (h *CategoryHandler) InitRoutes(router *gin.RouterGroup) {
+
 	categories := router.Group("/categories")
+
+	protected := categories.Group("")
+	protected.Use(middleware.AuthMiddleware())
 	{
 		categories.GET("", h.GetAllCategories)
-		categories.DELETE("/:id", h.DeleteCategory)
+		//categories.DELETE("/:id", h.DeleteCategory)
 	}
 }
 
@@ -36,7 +41,7 @@ func (h *CategoryHandler) GetAllCategories(c *gin.Context) {
 	response.Success(c, http.StatusOK, "Successfully retrieved categories", categories)
 }
 
-func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
+// func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 
-	response.Success(c, http.StatusOK, "Successfully retrieved categories", categories)
-}
+// 	response.Success(c, http.StatusOK, "Successfully retrieved categories", categories)
+// }

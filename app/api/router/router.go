@@ -4,12 +4,12 @@ import (
 	"context"
 	"net/http"
 	"shofy/app/api/server"
-<<<<<<< HEAD
+
 	categoryHandler "shofy/modules/categories/handler"
 	categoryService "shofy/modules/categories/service"
-=======
+
 	"shofy/middleware"
->>>>>>> 070a8f34864dcfd78b002d2a938a39006bc47545
+
 	chatHandler "shofy/modules/chat/handler"
 	productHandler "shofy/modules/product/handler"
 	pdService "shofy/modules/product/service"
@@ -36,15 +36,14 @@ func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 	chatRouter := chatHandler.NewChatAPIRoutes(ctx, srv)
 	chatRouter.InitRoutes(v1Router)
 
-<<<<<<< HEAD
-	productService := service.NewProductService(srv.DBPool)
-	productHandler := productHandler.NewProductHandler(productService)
-	productHandler.InitRoutes(v1Router)
+	// productService := service.NewProductService(srv.DBPool)
+	// productHandler := productHandler.NewProductHandler(productService)
+	// productHandler.InitRoutes(v1Router)
 
 	categoryService := categoryService.NewCategoryService(srv.DBPool)
 	categoryHandler := categoryHandler.NewCategoryHandler(categoryService)
 	categoryHandler.InitRoutes(v1Router)
-=======
+
 	// Protected routes
 	protectedRoutes := v1Router.Group("")
 	protectedRoutes.Use(middleware.AuthMiddleware())
@@ -54,7 +53,6 @@ func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 		productHandler := productHandler.NewProductHandler(productService)
 		productHandler.InitRoutes(protectedRoutes.Group("/products"))
 	}
->>>>>>> 070a8f34864dcfd78b002d2a938a39006bc47545
 
 	return router
 }
