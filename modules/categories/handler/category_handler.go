@@ -61,6 +61,7 @@ func (h *CategoryHandler) GetCategoryByID(c *gin.Context) {
 	})
 }
 
+// asdsadsada
 func (h *CategoryHandler) GetCategoriesPaginated(c *gin.Context) {
 	lim := c.Param("limit")
 	off := c.Param("offset")
