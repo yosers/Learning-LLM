@@ -125,12 +125,12 @@ const listUserRole = `-- name: ListUserRole :many
 select rl.id, rl.name from users us join user_roles ur
 on us.id = ur.user_id 
 join roles rl on rl.id = ur.role_id 
-where us.id = '2'
+where us.id = $1
 order by rl.id ASC
 `
 
-func (q *Queries) ListUserRole(ctx context.Context) ([]Role, error) {
-	rows, err := q.db.Query(ctx, listUserRole)
+func (q *Queries) ListUserRole(ctx context.Context, id int32) ([]Role, error) {
+	rows, err := q.db.Query(ctx, listUserRole, id)
 	if err != nil {
 		return nil, err
 	}

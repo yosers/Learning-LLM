@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 	"shofy/utils/jwt"
 	"shofy/utils/response"
@@ -57,25 +58,30 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		// Set user ID in context for later use
 		c.Set("user_id", claims.UserID)
-
+		c.Set("user_claims", claims)
 		c.Next()
 	}
 }
 
 func RequireRole(requiredRole string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		roleValue, exists := c.Get("role")
+		value, exists := c.Get("user_claims")
+		log.Println("RequireRole value:", value)
+		log.Println("RequireRole:", requiredRole)
+
 		if !exists {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Role not found"})
+			c.AbortWithStatusJSON(403, gin.H{"error": "Unauthorized"})
 			return
 		}
+		claims := value.(*jwt.JWTClaim)
 
-		role, ok := roleValue.(string)
-		if !ok || role != requiredRole {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
-			return
+		for _, role := range claims.Role {
+			if role == requiredRole {
+				c.Next()
+				return
+			}
 		}
 
-		c.Next()
+		c.AbortWithStatusJSON(403, gin.H{"error": "Forbidden"})
 	}
 }

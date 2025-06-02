@@ -45,5 +45,5 @@ WHERE phone = $1 LIMIT 1;
 select rl.* from users us join user_roles ur
 on us.id = ur.user_id 
 join roles rl on rl.id = ur.role_id 
-where us.id = '2'
+where us.id = $1
 order by rl.id ASC;
