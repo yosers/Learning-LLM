@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	middleware "shofy/middleware"
 	"shofy/modules/product/service"
 	"shofy/utils/response"
 
@@ -22,10 +23,10 @@ func NewProductHandler(productService service.ProductService) *ProductHandler {
 
 func (h *ProductHandler) InitRoutes(router *gin.RouterGroup) {
 	// All these routes will inherit the middleware from the group
-	router.GET("/list", h.ListProducts) // Changed from "" to "/list" for clarity
+	router.GET("/list", middleware.RequireRole("PRODUCT_LIST"), h.ListProducts) // Changed from "" to "/list" for clarity
 	router.GET("/all", h.GetAllProducts)
-	router.GET("/detail/:id", h.GetProductByID)     // Changed from ":id" to "/detail/:id" for clarity
-	router.DELETE("/deleted/:id", h.GetProductByID) // Changed from ":id" to "/detail/:id" for clarity
+	router.GET("/detail/:id", middleware.RequireRole("PRODUCT_VIEW"), h.GetProductByID)       // Changed from ":id" to "/detail/:id" for clarity
+	router.DELETE("/deleted/:id", middleware.RequireRole("PRODUCT_DELETE"), h.GetProductByID) // Changed from ":id" to "/detail/:id" for clarity
 
 }
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 )
@@ -77,11 +78,15 @@ func (s *WhatsAppService) SendOTP(phoneNumber string, otp string) error {
 	}
 
 	jsonData, err := json.Marshal(message)
+	log.Println("jsonData:", jsonData)
+
 	if err != nil {
 		return fmt.Errorf("error marshaling message: %v", err)
 	}
 
 	url := fmt.Sprintf("https://graph.facebook.com/v17.0/%s/messages", s.phoneNumberID)
+	log.Println("Masuk gwgw OTP:", url)
+
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("error creating request: %v", err)
@@ -96,6 +101,7 @@ func (s *WhatsAppService) SendOTP(phoneNumber string, otp string) error {
 		return fmt.Errorf("error sending message: %v", err)
 	}
 	defer resp.Body.Close()
+	log.Println("Masuk resp.StatusCode:", resp.StatusCode)
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("error response from WhatsApp API: %d", resp.StatusCode)

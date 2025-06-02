@@ -53,7 +53,7 @@ func (h *AuthHandler) VerifyOTP(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "OTP is required"})
+		response.Success(c, http.StatusOK, "OTP is required", phoneNumber)
 		return
 	}
 
@@ -65,12 +65,10 @@ func (h *AuthHandler) VerifyOTP(c *gin.Context) {
 	}
 
 	if !isValid {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid OTP"})
+		response.Success(c, http.StatusOK, "Invalid OTP", phoneNumber)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "OTP verified successfully",
-		"phone":   phoneNumber,
-	})
+	response.Success(c, http.StatusOK, "OTP verified successfully", phoneNumber)
+
 }

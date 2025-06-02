@@ -61,7 +61,7 @@ func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 
 	// Protected routes
 	protectedRoutes := v1Router.Group("")
-	protectedRoutes.Use(middleware.AuthMiddleware(), middleware.RequireRole("PRODUCT_LIST"))
+	protectedRoutes.Use(middleware.AuthMiddleware())
 	{
 		// Product routes
 		productService := pdService.NewProductService(srv.DBPool)

@@ -37,11 +37,12 @@ type PhoneResponse struct {
 	UserID       string `json:"user_id"`
 }
 
-func NewAuthService(db *pgxpool.Pool) *AuthService {
+func NewAuthService(pool *pgxpool.Pool) *AuthService {
 	return &AuthService{
-		db:              db,
+		db:              pool,
 		whatsappService: notificationService.NewWhatsAppService(),
 		otpStore:        make(map[string]*OTPData),
+		queries:         db.New(pool),
 	}
 }
 
@@ -105,7 +106,11 @@ func (s *AuthService) GenerateAndSendOTP(ctx context.Context, phoneNumber string
 		}
 	}
 	// Send OTP via WhatsApp
+	log.Println("phoneNumber:", phoneNumber)
+	log.Println("otp:", otp)
+
 	err = s.whatsappService.SendOTP(phoneNumber, otp)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to send OTP: %v", err)
 	}
