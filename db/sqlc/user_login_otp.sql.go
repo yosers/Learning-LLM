@@ -113,21 +113,15 @@ func (q *Queries) UpdateOTPByUserId(ctx context.Context, arg UpdateOTPByUserIdPa
 
 const verifyOtp = `-- name: VerifyOtp :one
 SELECT id, user_id, otp, is_used, created_at, expires_at FROM user_login_otp
-WHERE user_id = $1 
-    AND otp = $2
+WHERE otp = $1
     AND expires_at >= (NOW() AT TIME ZONE 'UTC')
     AND is_used = FALSE
 ORDER BY created_at DESC
 LIMIT 1
 `
 
-type VerifyOtpParams struct {
-	UserID int32
-	Otp    string
-}
-
-func (q *Queries) VerifyOtp(ctx context.Context, arg VerifyOtpParams) (UserLoginOtp, error) {
-	row := q.db.QueryRow(ctx, verifyOtp, arg.UserID, arg.Otp)
+func (q *Queries) VerifyOtp(ctx context.Context, otp string) (UserLoginOtp, error) {
+	row := q.db.QueryRow(ctx, verifyOtp, otp)
 	var i UserLoginOtp
 	err := row.Scan(
 		&i.ID,

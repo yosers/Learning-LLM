@@ -58,17 +58,13 @@ func (h *AuthHandler) VerifyOTP(c *gin.Context) {
 	}
 
 	// Verify OTP
-	isValid, err := h.authService.VerifyOTP(phoneNumber, input.OTP)
+	isValid, err := h.authService.VerifyOTP(c.Request.Context(), phoneNumber, input.OTP)
+
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.Success(c, http.StatusOK, "System OTP Error", phoneNumber)
 		return
 	}
 
-	if !isValid {
-		response.Success(c, http.StatusOK, "Invalid OTP", phoneNumber)
-		return
-	}
-
-	response.Success(c, http.StatusOK, "OTP verified successfully", phoneNumber)
+	response.Success(c, http.StatusOK, "OTP verified successfully", isValid)
 
 }

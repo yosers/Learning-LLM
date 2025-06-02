@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	db "shofy/db/sqlc"
 	notificationService "shofy/modules/notification/service"
+	"shofy/utils/jwt"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -75,16 +76,10 @@ func (s *AuthService) GenerateAndSendOTP(ctx context.Context, phoneNumber string
 				Otp:    otp,
 			})
 			if err != nil {
-
-				log.Println("Error inserting OTP to database:", getPhone.ID, otp, err)
-				log.Println("Error inserting OTP to database:", err)
 				return nil, fmt.Errorf("failed to store OTP: %w", err)
 			}
 		}
 	} else {
-		log.Println("Nilai Is Used:", dataUser.IsUsed.Bool)
-		log.Println("Nilai Otp:", otp)
-		log.Println("Nilai UserID:", dataUser.UserID)
 
 		if dataUser.IsUsed.Valid && !dataUser.IsUsed.Bool {
 			// Jika OTP sudah ada, update OTP
@@ -106,9 +101,6 @@ func (s *AuthService) GenerateAndSendOTP(ctx context.Context, phoneNumber string
 		}
 	}
 	// Send OTP via WhatsApp
-	log.Println("phoneNumber:", phoneNumber)
-	log.Println("otp:", otp)
-
 	err = s.whatsappService.SendOTP(phoneNumber, otp)
 
 	if err != nil {
@@ -122,25 +114,47 @@ func (s *AuthService) GenerateAndSendOTP(ctx context.Context, phoneNumber string
 	}, nil
 }
 
-func (s *AuthService) VerifyOTP(phoneNumber, inputOTP string) (bool, error) {
-	otpData, exists := s.otpStore[phoneNumber]
-	if !exists {
-		return false, nil
+func (s *AuthService) VerifyOTP(ctx context.Context, phoneNumber, inputOTP string) (*VerifyOTPResponse, error) {
+	otpData, err := s.queries.VerifyOtp(ctx, inputOTP)
+
+	if err != nil {
+		log.Println("Failed to verify OTP in User Login OTP:", err)
+		return nil, fmt.Errorf("Failed to verify OTP in User Login OTP: %w", err)
 	}
 
-	// Check if OTP is expired
-	if time.Now().After(otpData.ExpiresAt) {
-		delete(s.otpStore, phoneNumber)
-		return false, nil
+	// Mark OTP as used
+	err = s.queries.UpdateIsUsed(ctx, db.UpdateIsUsedParams{
+		UserID: int32(otpData.UserID),
+		Otp:    inputOTP,
+	})
+
+	if err != nil {
+		log.Println("Error update OTP:", err)
+		return nil, fmt.Errorf("failed to update OTP: %w", err)
 	}
 
-	// Verify OTP
-	isValid := otpData.OTP == inputOTP
+	//GENERATE ROLE JWT
+	rolesFromDB, err := s.queries.ListUserRole(ctx, otpData.UserID)
 
-	// Remove OTP after verification (one-time use)
-	if isValid {
-		delete(s.otpStore, phoneNumber)
+	if err != nil {
+		log.Println("failed to get user roles:", err)
+		return nil, fmt.Errorf("failed to get user roles: %w", err)
+	}
+	fmt.Printf("Role DB: %+v\n", rolesFromDB)
+
+	var roleList []string
+	for _, r := range rolesFromDB {
+		roleList = append(roleList, r.Name)
+	}
+	// Generate JWT token
+	token, err := jwt.GenerateToken(otpData.UserID, roleList)
+
+	if err != nil {
+		log.Println("failed to generate token:", err)
+		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	return isValid, nil
+	return &VerifyOTPResponse{
+		Token: token,
+	}, nil
 }

@@ -209,10 +209,7 @@ func GenerateOTP(length int) (string, error) {
 }
 
 func (s *userService) VerifyOTP(ctx context.Context, otp string, userId int) (*VerifyOTPResponse, error) {
-	otpData, err := s.queries.VerifyOtp(ctx, db.VerifyOtpParams{
-		UserID: int32(userId),
-		Otp:    otp,
-	})
+	otpData, err := s.queries.VerifyOtp(ctx, otp)
 
 	if err != nil {
 		log.Println("Failed to verify OTP in User Login OTP:", err)

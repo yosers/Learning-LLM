@@ -4,8 +4,7 @@ VALUES ($1, $2);
 
 -- name: VerifyOtp :one
 SELECT * FROM user_login_otp
-WHERE user_id = $1 
-    AND otp = $2
+WHERE otp = $1
     AND expires_at >= (NOW() AT TIME ZONE 'UTC')
     AND is_used = FALSE
 ORDER BY created_at DESC
