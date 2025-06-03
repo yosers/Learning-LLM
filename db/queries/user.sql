@@ -47,3 +47,7 @@ on us.id = ur.user_id
 join roles rl on rl.id = ur.role_id 
 where us.id = $1
 order by rl.id ASC;
+
+-- name: FindUserByPhoneAndCode :one
+SELECT * FROM users
+WHERE phone = $1 and code_area = $2 LIMIT 1;

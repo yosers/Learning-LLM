@@ -27,22 +27,32 @@ func (h *AuthHandler) InitRoutes(r *gin.RouterGroup) {
 }
 
 func (h *AuthHandler) SendOTP(c *gin.Context) {
-	phoneNumber := c.Param("phone")
+	var req service.SendOTPRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "Invalid request body")
+		return
+	}
 
 	// Validate phone number
-	if phoneNumber == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Phone number is required"})
+	if req.Phone == "" {
+		response.Success(c, http.StatusBadRequest, "Phone number is required", req.Phone)
+		return
+	}
+
+	if req.Code == "" {
+		response.Success(c, http.StatusBadRequest, "Code is required", req.Phone)
 		return
 	}
 
 	// Generate and send OTP
-	_, err := h.authService.GenerateAndSendOTP(c.Request.Context(), phoneNumber)
+	_, err := h.authService.GenerateAndSendOTP(c.Request.Context(), req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	response.Success(c, http.StatusOK, "OTP sent successfully", phoneNumber)
+	response.Success(c, http.StatusOK, "OTP sent successfully", req.Phone)
 
 }
 

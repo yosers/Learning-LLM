@@ -26,6 +26,8 @@ CREATE TABLE users (
     email varchar(255),
     unconfirmed_email varchar(255),
     phone varchar(255),
+    code_area varchar(255),
+
     unconfirmed_phone varchar(255),
 
     is_active BOOLEAN DEFAULT TRUE,

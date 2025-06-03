@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/rand"
 	db "shofy/db/sqlc"
 	notificationService "shofy/modules/notification/service"
 	"shofy/utils/jwt"
@@ -21,6 +20,11 @@ type OTPData struct {
 	PhoneNumber string
 	OTP         string
 	ExpiresAt   time.Time
+}
+
+type SendOTPRequest struct {
+	Code  string `json:"code"`
+	Phone string `json:"phone"`
 }
 
 type AuthService struct {
@@ -47,24 +51,20 @@ func NewAuthService(pool *pgxpool.Pool) *AuthService {
 	}
 }
 
-func (s *AuthService) GenerateAndSendOTP(ctx context.Context, phoneNumber string) (*PhoneResponse, error) {
+func (s *AuthService) GenerateAndSendOTP(ctx context.Context, req SendOTPRequest) (*PhoneResponse, error) {
 	// Generate 6 digit OTP
-	rand.Seed(time.Now().UnixNano())
-	otp := fmt.Sprintf("%06d", rand.Intn(1000000))
+	otp, err := GenerateOTP(6)
 
-	// Store OTP with 5 minutes expiration
-	s.otpStore[phoneNumber] = &OTPData{
-		PhoneNumber: phoneNumber,
-		OTP:         otp,
-		ExpiresAt:   time.Now().Add(5 * time.Minute),
-	}
+	checkPhone, err := s.queries.FindUserByPhoneAndCode(ctx, db.FindUserByPhoneAndCodeParams{
+		Phone:    pgtype.Text{String: req.Phone, Valid: true},
+		CodeArea: pgtype.Text{String: req.Code, Valid: true},
+	})
 
-	getPhone, err := s.queries.FindUserByPhone(ctx, pgtype.Text{String: phoneNumber, Valid: true})
 	if err != nil {
-		return nil, fmt.Errorf("failed to update OTP: %w", err)
+		return nil, fmt.Errorf("Failed To Check Phone and CodeArea: %w", err)
 	}
 
-	dataUser, err := s.queries.FindUserLoginOtpByPhone(ctx, pgtype.Text{String: phoneNumber, Valid: true})
+	dataUser, err := s.queries.FindUserLoginOtpByPhone(ctx, pgtype.Text{String: req.Phone, Valid: true})
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -72,7 +72,7 @@ func (s *AuthService) GenerateAndSendOTP(ctx context.Context, phoneNumber string
 
 			// Jika tidak ada OTP sebelumnya, insert OTP baru
 			err = s.queries.InsertUserLoginOtp(ctx, db.InsertUserLoginOtpParams{
-				UserID: getPhone.ID,
+				UserID: checkPhone.ID,
 				Otp:    otp,
 			})
 			if err != nil {
@@ -94,27 +94,28 @@ func (s *AuthService) GenerateAndSendOTP(ctx context.Context, phoneNumber string
 			}
 		} else {
 			return &PhoneResponse{
-				Phone_number: phoneNumber,
+				Phone_number: checkPhone.Phone.String,
 				Status:       true,
 				Remarks:      "User already logged",
 			}, nil
 		}
 	}
 	// Send OTP via WhatsApp
-	err = s.whatsappService.SendOTP(phoneNumber, otp)
+	err = s.whatsappService.SendOTP(checkPhone.Phone.String, otp)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to send OTP: %v", err)
 	}
 
 	return &PhoneResponse{
-		Phone_number: phoneNumber,
+		Phone_number: checkPhone.Phone.String,
 		Status:       true,
 		Otp:          otp,
 	}, nil
 }
 
 func (s *AuthService) VerifyOTP(ctx context.Context, phoneNumber, inputOTP string) (*VerifyOTPResponse, error) {
+
 	otpData, err := s.queries.VerifyOtp(ctx, inputOTP)
 
 	if err != nil {
