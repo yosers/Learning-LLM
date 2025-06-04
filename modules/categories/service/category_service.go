@@ -17,7 +17,7 @@ type CategoryService interface {
 }
 
 type PaginatedCategories struct {
-	Items       []db.ListCategoriesRow
+	Items       []db.Category
 	TotalItems  int64
 	CurrentPage int32
 	TotalPages  int32

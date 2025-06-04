@@ -107,22 +107,15 @@ type GetCategoriesPaginatedParams struct {
 	Offset int32
 }
 
-type ListCategoriesRow struct {
-	ID          pgtype.Numeric
-	ShopID      pgtype.Numeric
-	Name		pgtype.Text
-	ParentID    pgtype.Numeric
-}
-
-func (q *Queries) GetCategoriesPaginated(ctx context.Context, arg GetCategoriesPaginatedParams) ([]ListCategoriesRow, error) {
+func (q *Queries) GetCategoriesPaginated(ctx context.Context, arg GetCategoriesPaginatedParams) ([]Category, error) {
 	rows, err := q.db.Query(ctx, getCategoriesPaginated, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListCategoriesRow
+	var items []Category
 	for rows.Next() {
-		var i ListCategoriesRow
+		var i Category
 		if err := rows.Scan(
 			&i.ID,
 			&i.ShopID,

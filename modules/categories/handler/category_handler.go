@@ -27,7 +27,7 @@ func (h *CategoryHandler) InitRoutes(router *gin.RouterGroup) {
 	protected := categories.Group("")
 	protected.Use(middleware.AuthMiddleware())
 	{
-		router.GET("/list/limit/:limit/offset/:offset", h.GetCategoriesPaginated)
+		router.GET("/list/limit=:limit/offset=:offset", h.GetCategoriesPaginated)
 		router.GET("/all", h.GetAllCategories)
 		router.GET("/detail/:id", h.GetCategoryByID)
 		router.DELETE("/delete/:id", h.DeleteCategoryByID)
@@ -99,11 +99,19 @@ func (h *CategoryHandler) GetCategoriesPaginated(c *gin.Context) {
 func (h *CategoryHandler) DeleteCategoryByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.Error(c, http.StatusBadRequest, "Invalid product ID")
+		response.Error(c, http.StatusBadRequest, "Invalid category ID")
 		return
 	}
 
-	err := h.categoryService.DeleteByID(c.Request.Context(), id)
+	// Check if category exists
+	_, err := h.categoryService.GetCategoryByID(c.Request.Context(), id)
+	if err != nil {
+		response.Error(c, http.StatusNotFound, "Category not found")
+		return
+	}
+
+	// Proceed to delete
+	err = h.categoryService.DeleteByID(c.Request.Context(), id)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return

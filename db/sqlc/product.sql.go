@@ -11,6 +11,73 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createProduct = `-- name: CreateProduct :one
+INSERT INTO products (id, name, description, price, stock, category_id, shop_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, name, description, price, stock, category_id, shop_id, created_at, updated_at, deleted_at
+`
+
+type CreateProductParams struct {
+	ID          string
+	Name        string
+	Description pgtype.Text
+	Price       pgtype.Numeric
+	Stock       pgtype.Int4
+	CategoryID  pgtype.Int4
+	ShopID      int32
+}
+
+type CreateProductRow struct {
+	ID          string
+	Name        string
+	Description pgtype.Text
+	Price       pgtype.Numeric
+	Stock       pgtype.Int4
+	CategoryID  pgtype.Int4
+	ShopID      int32
+	CreatedAt   pgtype.Timestamp
+	UpdatedAt   pgtype.Timestamp
+	DeletedAt   pgtype.Timestamp
+}
+
+func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (CreateProductRow, error) {
+	row := q.db.QueryRow(ctx, createProduct,
+		arg.ID,
+		arg.Name,
+		arg.Description,
+		arg.Price,
+		arg.Stock,
+		arg.CategoryID,
+		arg.ShopID,
+	)
+	var i CreateProductRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.Price,
+		&i.Stock,
+		&i.CategoryID,
+		&i.ShopID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const deleteProductByID = `-- name: DeleteProductByID :exec
+UPDATE products
+SET deleted_at = NOW()
+WHERE id = $1
+RETURNING id, shop_id, category_id, name, description, price, stock, created_at, updated_at, deleted_at
+`
+
+func (q *Queries) DeleteProductByID(ctx context.Context, id string) error {
+	_, err := q.db.Exec(ctx, deleteProductByID, id)
+	return err
+}
+
 const getAllProducts = `-- name: GetAllProducts :many
 SELECT id, 
        name, 
@@ -185,4 +252,49 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]L
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateProduct = `-- name: UpdateProduct :one
+UPDATE products
+SET name = COALESCE($2, name), description = COALESCE($3, description), 
+       price = COALESCE($4, price), stock = COALESCE($5, stock), category_id = COALESCE($6, category_id),
+       shop_id = COALESCE($7, shop_id)
+WHERE id = $1
+RETURNING id, shop_id, category_id, name, description, price, stock, created_at, updated_at, deleted_at
+`
+
+type UpdateProductParams struct {
+	ID          string
+	Name        string
+	Description pgtype.Text
+	Price       pgtype.Numeric
+	Stock       pgtype.Int4
+	CategoryID  pgtype.Int4
+	ShopID      int32
+}
+
+func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error) {
+	row := q.db.QueryRow(ctx, updateProduct,
+		arg.ID,
+		arg.Name,
+		arg.Description,
+		arg.Price,
+		arg.Stock,
+		arg.CategoryID,
+		arg.ShopID,
+	)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.ShopID,
+		&i.CategoryID,
+		&i.Name,
+		&i.Description,
+		&i.Price,
+		&i.Stock,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
 }
