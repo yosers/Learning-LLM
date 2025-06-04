@@ -32,7 +32,7 @@ INSERT INTO users (
 ) VALUES (
     $1, $2, $3, $4
 )
-RETURNING id, shop_id, email, unconfirmed_email, phone, unconfirmed_phone, is_active, created_at, updated_at, slug
+RETURNING id, shop_id, email, unconfirmed_email, phone, code_area, unconfirmed_phone, is_active, created_at, updated_at, slug
 `
 
 type CreateUserParams struct {
@@ -56,6 +56,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Email,
 		&i.UnconfirmedEmail,
 		&i.Phone,
+		&i.CodeArea,
 		&i.UnconfirmedPhone,
 		&i.IsActive,
 		&i.CreatedAt,
@@ -76,7 +77,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 }
 
 const findUserByPhone = `-- name: FindUserByPhone :one
-SELECT id, shop_id, email, unconfirmed_email, phone, unconfirmed_phone, is_active, created_at, updated_at, slug FROM users
+SELECT id, shop_id, email, unconfirmed_email, phone, code_area, unconfirmed_phone, is_active, created_at, updated_at, slug FROM users
 WHERE phone = $1 LIMIT 1
 `
 
@@ -89,6 +90,36 @@ func (q *Queries) FindUserByPhone(ctx context.Context, phone pgtype.Text) (User,
 		&i.Email,
 		&i.UnconfirmedEmail,
 		&i.Phone,
+		&i.CodeArea,
+		&i.UnconfirmedPhone,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Slug,
+	)
+	return i, err
+}
+
+const findUserByPhoneAndCode = `-- name: FindUserByPhoneAndCode :one
+SELECT id, shop_id, email, unconfirmed_email, phone, code_area, unconfirmed_phone, is_active, created_at, updated_at, slug FROM users
+WHERE phone = $1 and code_area = $2 LIMIT 1
+`
+
+type FindUserByPhoneAndCodeParams struct {
+	Phone    pgtype.Text
+	CodeArea pgtype.Text
+}
+
+func (q *Queries) FindUserByPhoneAndCode(ctx context.Context, arg FindUserByPhoneAndCodeParams) (User, error) {
+	row := q.db.QueryRow(ctx, findUserByPhoneAndCode, arg.Phone, arg.CodeArea)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.ShopID,
+		&i.Email,
+		&i.UnconfirmedEmail,
+		&i.Phone,
+		&i.CodeArea,
 		&i.UnconfirmedPhone,
 		&i.IsActive,
 		&i.CreatedAt,
@@ -99,7 +130,7 @@ func (q *Queries) FindUserByPhone(ctx context.Context, phone pgtype.Text) (User,
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, shop_id, email, unconfirmed_email, phone, unconfirmed_phone, is_active, created_at, updated_at, slug FROM users
+SELECT id, shop_id, email, unconfirmed_email, phone, code_area, unconfirmed_phone, is_active, created_at, updated_at, slug FROM users
 WHERE id = $1 LIMIT 1
 `
 
@@ -112,6 +143,7 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 		&i.Email,
 		&i.UnconfirmedEmail,
 		&i.Phone,
+		&i.CodeArea,
 		&i.UnconfirmedPhone,
 		&i.IsActive,
 		&i.CreatedAt,
@@ -125,12 +157,12 @@ const listUserRole = `-- name: ListUserRole :many
 select rl.id, rl.name from users us join user_roles ur
 on us.id = ur.user_id 
 join roles rl on rl.id = ur.role_id 
-where us.id = '2'
+where us.id = $1
 order by rl.id ASC
 `
 
-func (q *Queries) ListUserRole(ctx context.Context) ([]Role, error) {
-	rows, err := q.db.Query(ctx, listUserRole)
+func (q *Queries) ListUserRole(ctx context.Context, id int32) ([]Role, error) {
+	rows, err := q.db.Query(ctx, listUserRole, id)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +182,7 @@ func (q *Queries) ListUserRole(ctx context.Context) ([]Role, error) {
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, shop_id, email, unconfirmed_email, phone, unconfirmed_phone, is_active, created_at, updated_at, slug FROM users
+SELECT id, shop_id, email, unconfirmed_email, phone, code_area, unconfirmed_phone, is_active, created_at, updated_at, slug FROM users
 WHERE shop_id = $1
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
@@ -177,6 +209,7 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 			&i.Email,
 			&i.UnconfirmedEmail,
 			&i.Phone,
+			&i.CodeArea,
 			&i.UnconfirmedPhone,
 			&i.IsActive,
 			&i.CreatedAt,
@@ -201,7 +234,7 @@ SET
     is_active = COALESCE($4, is_active),
     updated_at = now()
 WHERE id = $1
-RETURNING id, shop_id, email, unconfirmed_email, phone, unconfirmed_phone, is_active, created_at, updated_at, slug
+RETURNING id, shop_id, email, unconfirmed_email, phone, code_area, unconfirmed_phone, is_active, created_at, updated_at, slug
 `
 
 type UpdateUserParams struct {
@@ -225,6 +258,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.Email,
 		&i.UnconfirmedEmail,
 		&i.Phone,
+		&i.CodeArea,
 		&i.UnconfirmedPhone,
 		&i.IsActive,
 		&i.CreatedAt,

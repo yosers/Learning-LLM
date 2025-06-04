@@ -10,8 +10,8 @@ import (
 )
 
 type JWTClaim struct {
-	UserID int32 `json:"user_id"`
-	// Role   []string `json:"role"`
+	UserID int32    `json:"user_id"`
+	Role   []string `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -43,7 +43,7 @@ func cleanupBlacklist() {
 	}
 }
 
-func GenerateToken(userID int32) (string, error) {
+func GenerateToken(userID int32, role []string) (string, error) {
 	// Get secret key from environment variable
 	secretKey := os.Getenv("JWT_SECRET_KEY")
 	if secretKey == "" {
@@ -53,7 +53,7 @@ func GenerateToken(userID int32) (string, error) {
 	// Create claims with user ID and standard claims
 	claims := JWTClaim{
 		UserID: userID,
-		// Role:   role,
+		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)), // Token expires in 24 hours
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

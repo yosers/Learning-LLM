@@ -209,10 +209,7 @@ func GenerateOTP(length int) (string, error) {
 }
 
 func (s *userService) VerifyOTP(ctx context.Context, otp string, userId int) (*VerifyOTPResponse, error) {
-	otpData, err := s.queries.VerifyOtp(ctx, db.VerifyOtpParams{
-		UserID: int32(userId),
-		Otp:    otp,
-	})
+	otpData, err := s.queries.VerifyOtp(ctx, otp)
 
 	if err != nil {
 		log.Println("Failed to verify OTP in User Login OTP:", err)
@@ -242,8 +239,21 @@ func (s *userService) VerifyOTP(ctx context.Context, otp string, userId int) (*V
 		return nil, fmt.Errorf("failed to get user data: %w", err)
 	}
 
+	rolesFromDB, err := s.queries.ListUserRole(ctx, otpData.UserID)
+
+	if err != nil {
+		log.Println("failed to get user roles:", err)
+		return nil, fmt.Errorf("failed to get user roles: %w", err)
+	}
+	fmt.Printf("Role DB: %+v\n", rolesFromDB)
+
+	var roleList []string
+	for _, r := range rolesFromDB {
+		roleList = append(roleList, r.Name)
+	}
 	// Generate JWT token
-	token, err := jwt.GenerateToken(otpData.UserID)
+	token, err := jwt.GenerateToken(otpData.UserID, roleList)
+
 	if err != nil {
 		log.Println("failed to generate token:", err)
 		return nil, fmt.Errorf("failed to generate token: %w", err)

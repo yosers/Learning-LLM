@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"net/http"
+	middleware "shofy/middleware"
 	product_model "shofy/modules/product/model"
 	"shofy/modules/product/service"
 	"shofy/utils/response"
@@ -21,14 +22,13 @@ func NewProductHandler(productService service.ProductService) *ProductHandler {
 }
 
 func (h *ProductHandler) InitRoutes(router *gin.RouterGroup) {
-	products := router.Group("/products")
-	{
-		products.GET("/list", h.ListProducts)        // GET /v1/products/list?currpage=1&limit=10
-		products.GET("/:id", h.GetProductByID)       // GET /v1/products/:id
-		products.POST("/", h.CreateProduct)          // POST /v1/products
-		products.PUT("/:id", h.UpdateProduct)        // PUT /v1/products/:id
-		products.DELETE("/:id", h.DeleteProductByID) // DELETE /v1/products/:id
-	}
+	router.GET("/list", middleware.RequireRole("PRODUCT_LIST"), h.ListProducts) // Changed from "" to "/list" for clarity
+	router.GET("/all", h.GetAllProducts)
+	router.POST("/", middleware.RequireRole("PRODUCT_CREATE"), h.CreateProduct)
+	router.GET("/:id", middleware.RequireRole("PRODUCT_VIEW"), h.GetProductByID)
+	router.PUT("/:id", middleware.RequireRole("PRODUCT_UPDATE"), h.UpdateProduct)        // Changed from ":id" to "/detail/:id" for clarity
+	router.DELETE("/:id", middleware.RequireRole("PRODUCT_DELETE"), h.DeleteProductByID) // Changed from ":id" to "/detail/:id" for clarity
+
 }
 
 func (h *ProductHandler) CreateProduct(c *gin.Context) {
@@ -69,6 +69,8 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusOK, "Product updated successfully", product)
+
+	// All these routes will inherit the middleware from the group
 
 }
 

@@ -101,6 +101,7 @@ type User struct {
 	Email            pgtype.Text
 	UnconfirmedEmail pgtype.Text
 	Phone            pgtype.Text
+	CodeArea         pgtype.Text
 	UnconfirmedPhone pgtype.Text
 	IsActive         pgtype.Bool
 	CreatedAt        pgtype.Timestamptz
