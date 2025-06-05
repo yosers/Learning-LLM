@@ -27,6 +27,10 @@ type SendOTPRequest struct {
 	Phone string `json:"phone"`
 }
 
+type VerifyOTP struct {
+	Otp string `json:"otp"`
+}
+
 type AuthService struct {
 	db              *pgxpool.Pool
 	whatsappService *notificationService.WhatsAppService
@@ -65,7 +69,6 @@ func (s *AuthService) GenerateAndSendOTP(ctx context.Context, req SendOTPRequest
 	}
 
 	dataUser, err := s.queries.FindUserLoginOtpByPhone(ctx, pgtype.Text{String: req.Phone, Valid: true})
-
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			log.Println("Masuk", err)
@@ -100,8 +103,11 @@ func (s *AuthService) GenerateAndSendOTP(ctx context.Context, req SendOTPRequest
 			}, nil
 		}
 	}
+	log.Println("WHATSHAP", err)
+
 	// Send OTP via WhatsApp
-	err = s.whatsappService.SendOTP(checkPhone.Phone.String, otp)
+	err = s.whatsappService.SendOTP(checkPhone.CodeArea.String+checkPhone.Phone.String, otp)
+	log.Println("WHATSHAP 4")
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to send OTP: %v", err)
@@ -114,7 +120,7 @@ func (s *AuthService) GenerateAndSendOTP(ctx context.Context, req SendOTPRequest
 	}, nil
 }
 
-func (s *AuthService) VerifyOTP(ctx context.Context, phoneNumber, inputOTP string) (*VerifyOTPResponse, error) {
+func (s *AuthService) VerifyOTP(ctx context.Context, inputOTP string) (*VerifyOTPResponse, error) {
 
 	otpData, err := s.queries.VerifyOtp(ctx, inputOTP)
 

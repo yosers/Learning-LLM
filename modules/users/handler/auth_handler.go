@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 	"shofy/modules/users/service"
 	"shofy/utils/response"
@@ -21,12 +22,14 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 func (h *AuthHandler) InitRoutes(r *gin.RouterGroup) {
 	authRoutes := r.Group("/auth")
 	{
-		authRoutes.POST("/otp/send/:phone", h.SendOTP)
-		authRoutes.POST("/otp/verify/:phone", h.VerifyOTP)
+		authRoutes.POST("/otp/send", h.SendOTP)
+		authRoutes.POST("/otp/verify", h.VerifyOTP)
 	}
 }
 
 func (h *AuthHandler) SendOTP(c *gin.Context) {
+	log.Println("WHATSHAP")
+
 	var req service.SendOTPRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -57,21 +60,19 @@ func (h *AuthHandler) SendOTP(c *gin.Context) {
 }
 
 func (h *AuthHandler) VerifyOTP(c *gin.Context) {
-	phoneNumber := c.Param("phone")
-	var input struct {
-		OTP string `json:"otp" binding:"required"`
-	}
+
+	var input service.VerifyOTP
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		response.Success(c, http.StatusOK, "OTP is required", phoneNumber)
+		response.Error(c, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
 	// Verify OTP
-	isValid, err := h.authService.VerifyOTP(c.Request.Context(), phoneNumber, input.OTP)
+	isValid, err := h.authService.VerifyOTP(c.Request.Context(), input.Otp)
 
 	if err != nil {
-		response.Success(c, http.StatusOK, "System OTP Error", phoneNumber)
+		response.Success(c, http.StatusOK, "System OTP Error", err.Error())
 		return
 	}
 

@@ -50,10 +50,8 @@ func NewWhatsAppService() *WhatsAppService {
 }
 
 func (s *WhatsAppService) SendOTP(phoneNumber string, otp string) error {
-	// Format phone number to international format if needed
-	if phoneNumber[0] == '0' {
-		phoneNumber = "62" + phoneNumber[1:]
-	}
+
+	log.Println("WHATSHAP 3" + phoneNumber + " " + otp)
 
 	message := WhatsAppMessage{
 		MessagingProduct: "whatsapp",
@@ -85,7 +83,6 @@ func (s *WhatsAppService) SendOTP(phoneNumber string, otp string) error {
 	}
 
 	url := fmt.Sprintf("https://graph.facebook.com/v17.0/%s/messages", s.phoneNumberID)
-	log.Println("Masuk gwgw OTP:", url)
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
