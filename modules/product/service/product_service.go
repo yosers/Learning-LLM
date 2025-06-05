@@ -12,7 +12,7 @@ import (
 )
 
 type ProductService interface {
-	GetProductByID(ctx context.Context, id string) (*db.GetProductByIDRow, error)
+	GetProductByID(ctx context.Context, id string) (ListProductsRowSnake, error)
 	ListProducts(ctx context.Context, limit, offset int32, page int) (*PaginatedProducts, error)
 	GetAllProducts(ctx context.Context) ([]db.GetAllProductsRow, error)
 	DeleteProductByID(ctx context.Context, id string) error
@@ -36,14 +36,17 @@ type CreateProductRequest struct {
 	ShopID      int32   `json:"shop_id"`
 }
 
-type ProductResponse struct {
-	ID          string  `json:"id"`
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Price       float64 `json:"price"`
-	Stock       int32   `json:"stock"`
-	CategoryID  int32   `json:"category_id"`
-	ShopID      int32   `json:"shop_id"`
+type ListProductsRowSnake struct {
+	ID          string           `json:"id"`
+	Name        string           `json:"name"`
+	Description pgtype.Text      `json:"description"`
+	Price       pgtype.Numeric   `json:"price"`
+	Stock       pgtype.Int4      `json:"stock"`
+	CategoryID  string           `json:"category_id"`
+	ShopID      string           `json:"shop_id"`
+	CreatedAt   pgtype.Timestamp `json:"created_at"`
+	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
+	DeletedAt   pgtype.Timestamp `json:"deleted_at"`
 }
 
 func (s *productService) CreateProduct(ctx context.Context, req *CreateProductRequest) (*db.CreateProductRow, error) {
@@ -96,39 +99,72 @@ type productService struct {
 }
 
 type PaginatedProducts struct {
-	Items       []db.ListProductsRow
+	Items       []ListProductsRowSnake
 	TotalItems  int64
 	CurrentPage int
 	TotalPages  int
 	Limit       int
 }
 
-type PaginatedProductsResponse struct {
-	Data        []db.ListProductsRow `json:"data"`
-	CurrentPage int                  `json:"current_page"`
-	TotalPages  int                  `json:"total_pages"`
-	TotalItems  int64                `json:"total_items"`
-	Limit       int                  `json:"limit"`
+func mapToSnakeCase(rows []db.ListProductsRow) []ListProductsRowSnake {
+	snakes := make([]ListProductsRowSnake, len(rows))
+	for i, r := range rows {
+		snakes[i] = ListProductsRowSnake{
+			ID:          r.ID,
+			Name:        r.Name,
+			Description: r.Description,
+			Price:       r.Price,
+			Stock:       r.Stock,
+			CategoryID:  r.CategoryID,
+			ShopID:      r.ShopID,
+			CreatedAt:   r.CreatedAt,
+			UpdatedAt:   r.UpdatedAt,
+			DeletedAt:   r.DeletedAt,
+		}
+	}
+	return snakes
 }
 
-func (s *productService) GetProductByID(ctx context.Context, id string) (*db.GetProductByIDRow, error) {
+func mapRowToSnakeCase(r db.GetProductByIDRow) ListProductsRowSnake {
+	return ListProductsRowSnake{
+		ID:          r.ID,
+		Name:        r.Name,
+		Description: r.Description,
+		Price:       r.Price,
+		Stock:       r.Stock,
+		CategoryID:  r.CategoryID,
+		ShopID:      r.ShopID,
+		CreatedAt:   r.CreatedAt,
+		UpdatedAt:   r.UpdatedAt,
+		DeletedAt:   r.DeletedAt,
+	}
+}
+
+func (s *productService) GetProductByID(ctx context.Context, id string) (ListProductsRowSnake, error) {
 	product, err := s.queries.GetProductByID(ctx, id)
 	if err != nil {
-		return nil, err
+		return ListProductsRowSnake{}, err
 	}
-	return &product, nil
+
+	getproduct := mapRowToSnakeCase(product)
+
+	return getproduct, nil
 }
 
 func (s *productService) ListProducts(ctx context.Context, limit, offset int32, page int) (*PaginatedProducts, error) {
-	items, err := s.queries.ListProducts(ctx, db.ListProductsParams{
+	// Fetch raw product rows from DB
+	itemsRaw, err := s.queries.ListProducts(ctx, db.ListProductsParams{
 		Limit:  limit,
 		Offset: offset,
 	})
-
 	if err != nil {
 		return nil, err
 	}
 
+	// Map to snake_case struct
+	items := mapToSnakeCase(itemsRaw)
+
+	// Get total count for pagination
 	total, err := s.queries.GetCountProduct(ctx)
 	if err != nil {
 		return nil, err
@@ -136,6 +172,7 @@ func (s *productService) ListProducts(ctx context.Context, limit, offset int32, 
 
 	totalPages := int((total + int64(limit) - 1) / int64(limit)) // ceil(total / limit)
 
+	// Return paginated result
 	return &PaginatedProducts{
 		Items:       items,
 		TotalItems:  total,
