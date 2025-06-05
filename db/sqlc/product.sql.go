@@ -79,18 +79,20 @@ func (q *Queries) DeleteProductByID(ctx context.Context, id string) error {
 }
 
 const getAllProducts = `-- name: GetAllProducts :many
-SELECT id, 
-       name, 
-       description, 
-       price, 
-       stock, 
-       category_id,
-       created_at, 
-       updated_at, 
-       deleted_at
-FROM products
-WHERE deleted_at IS NULL
-ORDER BY created_at DESC
+SELECT p.id, 
+       p.name, 
+       p.description, 
+       p.price, 
+       p.stock, 
+       c.name as category_id,
+       s.name as shop_id,
+       p.created_at, 
+       p.updated_at, 
+       p.deleted_at
+FROM products p inner join categories c on p.category_id = c.id
+inner join shops s on p.shop_id = s.id
+WHERE p.deleted_at IS NULL
+ORDER BY p.created_at DESC
 `
 
 type GetAllProductsRow struct {
@@ -99,7 +101,8 @@ type GetAllProductsRow struct {
 	Description pgtype.Text
 	Price       pgtype.Numeric
 	Stock       pgtype.Int4
-	CategoryID  pgtype.Int4
+	CategoryID  string
+	ShopID      string
 	CreatedAt   pgtype.Timestamp
 	UpdatedAt   pgtype.Timestamp
 	DeletedAt   pgtype.Timestamp
@@ -121,6 +124,7 @@ func (q *Queries) GetAllProducts(ctx context.Context) ([]GetAllProductsRow, erro
 			&i.Price,
 			&i.Stock,
 			&i.CategoryID,
+			&i.ShopID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -168,7 +172,8 @@ type GetProductByIDRow struct {
 	Description pgtype.Text
 	Price       pgtype.Numeric
 	Stock       pgtype.Int4
-	CategoryID  pgtype.Int4
+	CategoryID  string
+	ShopID      string
 	CreatedAt   pgtype.Timestamp
 	UpdatedAt   pgtype.Timestamp
 	DeletedAt   pgtype.Timestamp
@@ -192,18 +197,20 @@ func (q *Queries) GetProductByID(ctx context.Context, id string) (GetProductByID
 }
 
 const listProducts = `-- name: ListProducts :many
-SELECT id, 
-       name, 
-       description, 
-       price, 
-       stock, 
-       category_id,
-       created_at, 
-       updated_at, 
-       deleted_at
-FROM products
-WHERE deleted_at IS NULL
-ORDER BY created_at DESC
+SELECT p.id, 
+       p.name, 
+       p.description, 
+       p.price, 
+       p.stock, 
+       c.name as category_id,
+       s.name as shop_id,
+       p.created_at, 
+       p.updated_at, 
+       p.deleted_at
+FROM products p inner join categories c on p.category_id = c.id
+inner join shops s on p.shop_id = s.id
+WHERE p.deleted_at IS NULL
+ORDER BY p.created_at DESC
 LIMIT $1 OFFSET $2
 `
 
@@ -218,7 +225,8 @@ type ListProductsRow struct {
 	Description pgtype.Text
 	Price       pgtype.Numeric
 	Stock       pgtype.Int4
-	CategoryID  pgtype.Int4
+	CategoryID  string
+	ShopID      string
 	CreatedAt   pgtype.Timestamp
 	UpdatedAt   pgtype.Timestamp
 	DeletedAt   pgtype.Timestamp
@@ -240,6 +248,7 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]L
 			&i.Price,
 			&i.Stock,
 			&i.CategoryID,
+			&i.ShopID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
