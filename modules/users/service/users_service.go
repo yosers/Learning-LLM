@@ -45,8 +45,7 @@ type PhoneNumberResponse struct {
 type VerifyOTPResponse struct {
 	Token string `json:"token"`
 	//User  *db.User `json:"user"`
-	Email string `json:"email"`
-	Phone string `json:"phone"`
+	Role []string `json:"role"`
 }
 
 type CreateUserRequest struct {
@@ -233,7 +232,7 @@ func (s *userService) VerifyOTP(ctx context.Context, otp string, userId int) (*V
 	}
 
 	// Get user data
-	user, err := s.queries.GetUser(ctx, otpData.UserID)
+	_, err = s.queries.GetUser(ctx, otpData.UserID)
 	if err != nil {
 		log.Println("failed to get user data:", err)
 		return nil, fmt.Errorf("failed to get user data: %w", err)
@@ -261,8 +260,6 @@ func (s *userService) VerifyOTP(ctx context.Context, otp string, userId int) (*V
 
 	return &VerifyOTPResponse{
 		Token: token,
-		Email: user.Email.String,
-		Phone: user.Phone.String,
 	}, nil
 }
 

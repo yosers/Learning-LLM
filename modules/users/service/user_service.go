@@ -65,13 +65,12 @@ func (s *AuthService) GenerateAndSendOTP(ctx context.Context, req SendOTPRequest
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("Failed To Check Phone and CodeArea: %w", err)
+		return nil, fmt.Errorf("Data Not Found: %w", err)
 	}
 
 	dataUser, err := s.queries.FindUserLoginOtpByPhone(ctx, pgtype.Text{String: req.Phone, Valid: true})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			log.Println("Masuk", err)
 
 			// Jika tidak ada OTP sebelumnya, insert OTP baru
 			err = s.queries.InsertUserLoginOtp(ctx, db.InsertUserLoginOtpParams{
@@ -106,12 +105,12 @@ func (s *AuthService) GenerateAndSendOTP(ctx context.Context, req SendOTPRequest
 	log.Println("WHATSHAP", err)
 
 	// Send OTP via WhatsApp
-	err = s.whatsappService.SendOTP(checkPhone.CodeArea.String+checkPhone.Phone.String, otp)
-	log.Println("WHATSHAP 4")
+	// err = s.whatsappService.SendOTP(checkPhone.CodeArea.String+checkPhone.Phone.String, otp)
+	// log.Println("WHATSHAP 4")
 
-	if err != nil {
-		return nil, fmt.Errorf("failed to send OTP: %v", err)
-	}
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to send OTP: %v", err)
+	// }
 
 	return &PhoneResponse{
 		Phone_number: checkPhone.Phone.String,
@@ -163,5 +162,6 @@ func (s *AuthService) VerifyOTP(ctx context.Context, inputOTP string) (*VerifyOT
 
 	return &VerifyOTPResponse{
 		Token: token,
+		Role:  roleList,
 	}, nil
 }
