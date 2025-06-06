@@ -63,22 +63,27 @@ func AuthMiddleware() gin.HandlerFunc {
 	}
 }
 
-func RequireRole(requiredRole string) gin.HandlerFunc {
+func RequireRole(requiredRoles []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		value, exists := c.Get("user_claims")
 		log.Println("RequireRole value:", value)
-		log.Println("RequireRole:", requiredRole)
+		log.Println("Required Roles:", requiredRoles)
 
 		if !exists {
 			c.AbortWithStatusJSON(403, gin.H{"error": "Unauthorized"})
 			return
 		}
+
 		claims := value.(*jwt.JWTClaim)
 
-		for _, role := range claims.Role {
-			if role == requiredRole {
-				c.Next()
-				return
+		// Loop over user roles
+		for _, userRole := range claims.Role {
+			// Check if user role exists in requiredRoles
+			for _, requiredRole := range requiredRoles {
+				if userRole == requiredRole {
+					c.Next()
+					return
+				}
 			}
 		}
 
