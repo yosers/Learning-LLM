@@ -53,10 +53,23 @@ func (q *Queries) DeleteOrder(ctx context.Context, id int32) error {
 	return err
 }
 
-const getListOrders = `-- name: GetListOrders :many
-SELECT id, shop_id, user_id, total, status, created_at
+const getCountOrder = `-- name: GetCountOrder :one
+SELECT COUNT(*) 
 FROM orders
-ORDER BY created_at DESC
+`
+
+func (q *Queries) GetCountOrder(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, getCountOrder)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getListOrders = `-- name: GetListOrders :many
+SELECT o.id, s.name as shop_name, u.id as user_id, o.total, o.status, o.created_at
+FROM orders o inner join shops s on o.shop_id = s.id
+inner join users u on o.user_id = u.id
+ORDER BY o.created_at DESC
 LIMIT $1 OFFSET $2
 `
 
@@ -65,18 +78,27 @@ type GetListOrdersParams struct {
 	Offset int32
 }
 
-func (q *Queries) GetListOrders(ctx context.Context, arg GetListOrdersParams) ([]Order, error) {
+type GetListOrdersRow struct {
+	ID        int32
+	ShopName  string
+	UserID    int32
+	Total     pgtype.Numeric
+	Status    pgtype.Text
+	CreatedAt pgtype.Timestamp
+}
+
+func (q *Queries) GetListOrders(ctx context.Context, arg GetListOrdersParams) ([]GetListOrdersRow, error) {
 	rows, err := q.db.Query(ctx, getListOrders, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Order
+	var items []GetListOrdersRow
 	for rows.Next() {
-		var i Order
+		var i GetListOrdersRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.ShopID,
+			&i.ShopName,
 			&i.UserID,
 			&i.Total,
 			&i.Status,
@@ -114,7 +136,7 @@ func (q *Queries) GetOrderById(ctx context.Context, id int32) (Order, error) {
 
 const updateOrder = `-- name: UpdateOrder :one
 UPDATE orders
-SET total = $2, status = $3
+SET total = COALESCE($2, total), status = COALESCE($3, status)  
 WHERE id = $1
 RETURNING id, shop_id, user_id, total, status, created_at
 `

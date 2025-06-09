@@ -7,6 +7,8 @@ import (
 	categoryHandler "shofy/modules/categories/handler"
 	categoryService "shofy/modules/categories/service"
 	chatHandler "shofy/modules/chat/handler"
+	orderHandler "shofy/modules/orders/handler"
+	orderService "shofy/modules/orders/service"
 	productHandler "shofy/modules/product/handler"
 	pdService "shofy/modules/product/service"
 	usHandler "shofy/modules/users/handler"
@@ -57,6 +59,10 @@ func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 	categoryService := categoryService.NewCategoryService(srv.DBPool)
 	categoryHandler := categoryHandler.NewCategoryHandler(categoryService)
 	categoryHandler.InitRoutes(v1Router.Group("/categories"))
+
+	orderService := orderService.NewOrderService(srv.DBPool)
+	orderHandler := orderHandler.NewOrderHandler(orderService)
+	orderHandler.InitRoutes(v1Router.Group("/orders"))
 
 	// Protected routes
 	// protectedRoutes := v1Router.Group("")

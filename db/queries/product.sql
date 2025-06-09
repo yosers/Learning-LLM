@@ -1,15 +1,17 @@
 -- name: GetProductByID :one
-SELECT id, 
-       name, 
-       description, 
-       price, 
-       stock, 
-       category_id,
-       created_at, 
-       updated_at, 
-       deleted_at
-FROM products
-WHERE id = $1 AND deleted_at IS NULL;
+SELECT p.id, 
+       p.name, 
+       p.description, 
+       p.price, 
+       p.stock, 
+       c.name as category_id,
+       s.name as shop_id,
+       p.created_at, 
+       p.updated_at, 
+       p.deleted_at
+FROM products p inner join categories c on p.category_id = c.id
+inner join shops s on p.shop_id = s.id
+WHERE p.id = $1 AND p.deleted_at IS NULL;
 
 -- name: CreateProduct :one
 INSERT INTO products (id, name, description, price, stock, category_id, shop_id)
