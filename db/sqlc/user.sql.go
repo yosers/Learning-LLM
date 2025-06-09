@@ -167,7 +167,7 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 }
 
 const listUserRole = `-- name: ListUserRole :many
-select rl.id, rl.name from users us join user_roles ur
+select rl.id, rl.name, rl.created_at, rl.updated_at, rl.is_active from users us join user_roles ur
 on us.id = ur.user_id 
 join roles rl on rl.id = ur.role_id 
 where us.id = $1 AND us.is_active = true
@@ -183,7 +183,13 @@ func (q *Queries) ListUserRole(ctx context.Context, id int32) ([]Role, error) {
 	var items []Role
 	for rows.Next() {
 		var i Role
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.IsActive,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

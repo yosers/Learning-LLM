@@ -10,6 +10,8 @@ import (
 	chatHandler "shofy/modules/chat/handler"
 	productHandler "shofy/modules/product/handler"
 	pdService "shofy/modules/product/service"
+	rlHandler "shofy/modules/role/handler"
+	rlService "shofy/modules/role/service"
 	usHandler "shofy/modules/users/handler"
 	usService "shofy/modules/users/service"
 	"time"
@@ -67,6 +69,10 @@ func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 		userService := usService.NewUserService(srv.DBPool)
 		userHandler := usHandler.NewUserHandler(userService)
 		userHandler.InitRoutes(v1Router.Group("/users"))
+
+		roleService := rlService.NewRoleService(srv.DBPool)
+		roleHandler := rlHandler.NewRoleHandler(roleService)
+		roleHandler.InitRoutes(v1Router.Group("/roles"))
 	}
 
 	return router

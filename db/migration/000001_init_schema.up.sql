@@ -60,7 +60,10 @@ CREATE TABLE user_profiles (
 -- Roles: e.g. 'admin', 'manager', 'staff', 'customer'
 CREATE TABLE roles (
     id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE
+    name TEXT NOT NULL UNIQUE,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NULL,
+    is_active BOOLEAN DEFAULT TRUE NOT NULL
 );
 
 -- Role assignments (many-to-many)

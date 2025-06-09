@@ -62,8 +62,11 @@ type Product struct {
 }
 
 type Role struct {
-	ID   int32
-	Name string
+	ID        int32
+	Name      string
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+	IsActive  bool
 }
 
 type Session struct {
