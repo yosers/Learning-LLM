@@ -21,10 +21,12 @@ func NewUserHandler(userService service.UserService) *UserHandler {
 }
 
 func (h *UserHandler) InitRoutes(router *gin.RouterGroup) {
-	router.GET("/list", h.ListUsers) // Changed from "" to "/list" for clarity
+	router.GET("/list", h.ListUsers)
 	router.POST("/", h.CreateUser)
 	router.GET("/logout/:user-id", h.Logout)
-	router.PUT("/:id", h.UpdateUser) // Changed from ":id" to "/detail/:id" for clarity
+	router.PUT("/:id", h.UpdateUser)
+	router.GET("/:id", h.GetUsersByID)
+	router.DELETE("/:id", h.DeleteUsersByID)
 
 }
 
@@ -151,4 +153,55 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusOK, "Users retrieved successfully", users)
+}
+
+func (h *UserHandler) GetUsersByID(c *gin.Context) {
+	userId := c.Param("id")
+	if userId == "" {
+		response.NotSuccess(c, http.StatusOK, "User ID is required", nil)
+		return
+	}
+
+	userIdInt, err := strconv.Atoi(userId)
+	if err != nil {
+		response.NotSuccess(c, http.StatusOK, "Invalid user ID", nil)
+		return
+	}
+
+	user, err := h.userService.GetUserByID(c.Request.Context(), int32(userIdInt))
+	if err != nil {
+		if err.Error() == "user not found" {
+			response.NotSuccess(c, http.StatusOK, "User not found", nil)
+			return
+		}
+		response.Error(c, http.StatusInternalServerError, fmt.Sprintf("Failed to get user: %v", err))
+		return
+	}
+
+	response.Success(c, http.StatusOK, "User retrieved successfully", user)
+}
+
+func (h *UserHandler) DeleteUsersByID(c *gin.Context) {
+	userId := c.Param("id")
+	if userId == "" {
+		response.NotSuccess(c, http.StatusOK, "User ID is required", nil)
+		return
+	}
+
+	userIdInt, err := strconv.Atoi(userId)
+	if err != nil {
+		response.NotSuccess(c, http.StatusOK, "Invalid user ID", nil)
+		return
+	}
+
+	if err := h.userService.DeleteUsersByID(c.Request.Context(), int32(userIdInt)); err != nil {
+		if err.Error() == "user not found" {
+			response.NotSuccess(c, http.StatusOK, "User not found", nil)
+			return
+		}
+		response.Error(c, http.StatusInternalServerError, fmt.Sprintf("Failed to delete user: %v", err))
+		return
+	}
+
+	response.Success(c, http.StatusOK, "User deleted successfully", nil)
 }

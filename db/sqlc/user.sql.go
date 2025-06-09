@@ -78,6 +78,17 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 	return err
 }
 
+const deleteUserById = `-- name: DeleteUserById :exec
+UPDATE users    
+SET is_active = false, updated_at = now()
+WHERE id = $1
+`
+
+func (q *Queries) DeleteUserById(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, deleteUserById, id)
+	return err
+}
+
 const findUserByPhone = `-- name: FindUserByPhone :one
 SELECT id, shop_id, email, unconfirmed_email, phone, code_area, unconfirmed_phone, is_active, created_at, updated_at, slug FROM users
 WHERE phone = $1 AND is_active = true LIMIT 1

@@ -52,3 +52,8 @@ order by rl.id ASC;
 -- name: FindUserByPhoneAndCode :one
 SELECT * FROM users
 WHERE phone = $1 and code_area = $2  AND is_active = true LIMIT 1;
+
+-- name: DeleteUserById :exec
+UPDATE users    
+SET is_active = false, updated_at = now()
+WHERE id = $1;

@@ -18,6 +18,8 @@ type UserService interface {
 	CreateUser(ctx context.Context, req *CreateUserRequest) (*UserResponse, error)
 	UpdateUser(ctx context.Context, userId int32, req *UpdateUserRequest) (*UserResponse, error)
 	ListUsers(ctx context.Context, req *ListUsersRequest) (*ListUsersResponse, error)
+	GetUserByID(ctx context.Context, id int32) (UserResponse, error)
+	DeleteUsersByID(ctx context.Context, id int32) error
 }
 
 func NewUserService(dbPool *pgxpool.Pool) UserService {
@@ -288,4 +290,55 @@ func (s *userService) ListUsers(ctx context.Context, req *ListUsersRequest) (*Li
 		PageSize:   req.PageSize,
 		TotalPages: totalPages,
 	}, nil
+}
+
+func (s *userService) GetUserByID(ctx context.Context, id int32) (UserResponse, error) {
+	user, err := s.queries.GetUser(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return UserResponse{}, fmt.Errorf("user not found")
+		}
+		return UserResponse{}, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	profile, err := s.queries.GetUserProfile(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return UserResponse{}, fmt.Errorf("user profile not found")
+		}
+		return UserResponse{}, fmt.Errorf("failed to get user profile: %w", err)
+	}
+
+	return UserResponse{
+		ID:         user.ID,
+		ShopID:     user.ShopID,
+		Email:      user.Email.String,
+		Phone:      user.Phone.String,
+		FirstName:  profile.FirstName.String,
+		LastName:   profile.LastName.String,
+		Address:    profile.Address.String,
+		City:       profile.City.String,
+		Country:    profile.Country.String,
+		PostalCode: profile.PostalCode.String,
+		IsActive:   user.IsActive.Bool,
+	}, nil
+}
+
+func (s *userService) DeleteUsersByID(ctx context.Context, id int32) error {
+	// Check if user exists
+	_, err := s.queries.GetUser(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("user not found")
+		}
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+
+	// Proceed to delete user
+	err = s.queries.DeleteUserById(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	return nil
 }
