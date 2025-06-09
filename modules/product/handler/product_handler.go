@@ -75,7 +75,7 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 
 func (h *ProductHandler) GetProductByID(c *gin.Context) {
 	// Get user ID from context (set by auth middleware)
-	// userID, exists := c.Get("user_id")
+	//  exists = c.Get("user_id")
 	// if !exists {
 	// 	response.Error(c, http.StatusUnauthorized, "User not authenticated")
 	// 	return
@@ -125,7 +125,7 @@ func (h *ProductHandler) ListProducts(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusOK, "Products retrieved successfully", gin.H{
-		"data":         result.Items,
+		"product":      result.Items,
 		"total_items":  result.TotalItems,
 		"total_pages":  result.TotalPages,
 		"current_page": result.CurrentPage,

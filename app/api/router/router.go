@@ -37,10 +37,6 @@ func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 
 	v1Router := router.Group("/v1")
 
-	userService := usService.NewUserService(srv.DBPool)
-	userHandler := usHandler.NewUserHandler(userService)
-	userHandler.InitRoutes(v1Router)
-
 	// Public routes
 	authService := usService.NewAuthService(srv.DBPool)
 	authHandler := usHandler.NewAuthHandler(authService)
@@ -55,10 +51,6 @@ func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 	// productHandler := productHandler.NewProductHandler(productService)
 	// productHandler.InitRoutes(v1Router.Group("/products"))
 
-	categoryService := categoryService.NewCategoryService(srv.DBPool)
-	categoryHandler := categoryHandler.NewCategoryHandler(categoryService)
-	categoryHandler.InitRoutes(v1Router.Group("/categories"))
-
 	// Protected routes
 	protectedRoutes := v1Router.Group("")
 	protectedRoutes.Use(middleware.AuthMiddleware(), middleware.RequireRole([]string{"ADMIN", "SUPER_ADMIN"}))
@@ -67,6 +59,14 @@ func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 		productService := pdService.NewProductService(srv.DBPool)
 		productHandler := productHandler.NewProductHandler(productService)
 		productHandler.InitRoutes(protectedRoutes.Group("/products"))
+
+		categoryService := categoryService.NewCategoryService(srv.DBPool)
+		categoryHandler := categoryHandler.NewCategoryHandler(categoryService)
+		categoryHandler.InitRoutes(v1Router.Group("/categories"))
+
+		userService := usService.NewUserService(srv.DBPool)
+		userHandler := usHandler.NewUserHandler(userService)
+		userHandler.InitRoutes(v1Router.Group("/users"))
 	}
 
 	return router

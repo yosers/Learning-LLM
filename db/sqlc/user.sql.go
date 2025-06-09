@@ -13,17 +13,18 @@ import (
 
 const countUsers = `-- name: CountUsers :one
 SELECT COUNT(*) FROM users
-WHERE shop_id = $1
+WHERE is_active = true
 `
 
-func (q *Queries) CountUsers(ctx context.Context, shopID int32) (int64, error) {
-	row := q.db.QueryRow(ctx, countUsers, shopID)
+func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countUsers)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
 }
 
 const createUser = `-- name: CreateUser :one
+
 INSERT INTO users (
     shop_id,
     email,
@@ -42,6 +43,7 @@ type CreateUserParams struct {
 	IsActive pgtype.Bool
 }
 
+// WHERE shop_id = $1;
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, createUser,
 		arg.ShopID,
@@ -78,7 +80,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 
 const findUserByPhone = `-- name: FindUserByPhone :one
 SELECT id, shop_id, email, unconfirmed_email, phone, code_area, unconfirmed_phone, is_active, created_at, updated_at, slug FROM users
-WHERE phone = $1 LIMIT 1
+WHERE phone = $1 AND is_active = true LIMIT 1
 `
 
 func (q *Queries) FindUserByPhone(ctx context.Context, phone pgtype.Text) (User, error) {
@@ -102,7 +104,7 @@ func (q *Queries) FindUserByPhone(ctx context.Context, phone pgtype.Text) (User,
 
 const findUserByPhoneAndCode = `-- name: FindUserByPhoneAndCode :one
 SELECT id, shop_id, email, unconfirmed_email, phone, code_area, unconfirmed_phone, is_active, created_at, updated_at, slug FROM users
-WHERE phone = $1 and code_area = $2 LIMIT 1
+WHERE phone = $1 and code_area = $2  AND is_active = true LIMIT 1
 `
 
 type FindUserByPhoneAndCodeParams struct {
@@ -131,7 +133,7 @@ func (q *Queries) FindUserByPhoneAndCode(ctx context.Context, arg FindUserByPhon
 
 const getUser = `-- name: GetUser :one
 SELECT id, shop_id, email, unconfirmed_email, phone, code_area, unconfirmed_phone, is_active, created_at, updated_at, slug FROM users
-WHERE id = $1 LIMIT 1
+WHERE id = $1 and is_active = true LIMIT 1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
@@ -157,7 +159,7 @@ const listUserRole = `-- name: ListUserRole :many
 select rl.id, rl.name from users us join user_roles ur
 on us.id = ur.user_id 
 join roles rl on rl.id = ur.role_id 
-where us.id = $1
+where us.id = $1 AND us.is_active = true
 order by rl.id ASC
 `
 
@@ -183,19 +185,18 @@ func (q *Queries) ListUserRole(ctx context.Context, id int32) ([]Role, error) {
 
 const listUsers = `-- name: ListUsers :many
 SELECT id, shop_id, email, unconfirmed_email, phone, code_area, unconfirmed_phone, is_active, created_at, updated_at, slug FROM users
-WHERE shop_id = $1
+WHERE  is_active = true
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3
+LIMIT $1 OFFSET $2
 `
 
 type ListUsersParams struct {
-	ShopID int32
 	Limit  int32
 	Offset int32
 }
 
 func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error) {
-	rows, err := q.db.Query(ctx, listUsers, arg.ShopID, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listUsers, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

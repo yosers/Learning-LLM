@@ -1,16 +1,17 @@
 -- name: GetUser :one
 SELECT * FROM users
-WHERE id = $1 LIMIT 1;
+WHERE id = $1 and is_active = true LIMIT 1;
 
 -- name: ListUsers :many
 SELECT * FROM users
-WHERE shop_id = $1
+WHERE  is_active = true
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
+LIMIT $1 OFFSET $2;
 
 -- name: CountUsers :one
 SELECT COUNT(*) FROM users
-WHERE shop_id = $1;
+WHERE is_active = true;
+-- WHERE shop_id = $1;
 
 -- name: CreateUser :one
 INSERT INTO users (
@@ -39,15 +40,15 @@ WHERE id = $1;
 
 -- name: FindUserByPhone :one
 SELECT * FROM users
-WHERE phone = $1 LIMIT 1;
+WHERE phone = $1 AND is_active = true LIMIT 1;
 
 -- name: ListUserRole :many
 select rl.* from users us join user_roles ur
 on us.id = ur.user_id 
 join roles rl on rl.id = ur.role_id 
-where us.id = $1
+where us.id = $1 AND us.is_active = true
 order by rl.id ASC;
 
 -- name: FindUserByPhoneAndCode :one
 SELECT * FROM users
-WHERE phone = $1 and code_area = $2 LIMIT 1;
+WHERE phone = $1 and code_area = $2  AND is_active = true LIMIT 1;

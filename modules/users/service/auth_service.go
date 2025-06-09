@@ -2,10 +2,12 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"errors"
 	"fmt"
 	"log"
+	"math/big"
 	db "shofy/db/sqlc"
 	notificationService "shofy/modules/notification/service"
 	"shofy/utils/jwt"
@@ -44,6 +46,11 @@ type PhoneResponse struct {
 	Otp          string `json:"otp"`
 	Remarks      string `json:"remarks"`
 	UserID       string `json:"user_id"`
+}
+
+type VerifyOTPResponse struct {
+	Token string   `json:"token"`
+	Role  []string `json:"role"`
 }
 
 func NewAuthService(pool *pgxpool.Pool) *AuthService {
@@ -164,4 +171,21 @@ func (s *AuthService) VerifyOTP(ctx context.Context, inputOTP string) (*VerifyOT
 		Token: token,
 		Role:  roleList,
 	}, nil
+}
+
+// GenerateOTP menghasilkan OTP numerik dengan panjang tertentu (4 atau 6 digit)
+func GenerateOTP(length int) (string, error) {
+	if length <= 0 {
+		return "", fmt.Errorf("invalid OTP length")
+	}
+
+	otp := ""
+	for i := 0; i < length; i++ {
+		n, err := rand.Int(rand.Reader, big.NewInt(10)) // angka 0–9
+		if err != nil {
+			return "", err
+		}
+		otp += n.String()
+	}
+	return otp, nil
 }
