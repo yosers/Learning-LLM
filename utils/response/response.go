@@ -16,6 +16,14 @@ func Success(c *gin.Context, code int, message string, data interface{}) {
 	})
 }
 
+func NotSuccess(c *gin.Context, code int, message string, data interface{}) {
+	c.JSON(code, Response{
+		Status:  false,
+		Message: message,
+		Data:    data,
+	})
+}
+
 func Error(c *gin.Context, code int, message string) {
 	c.JSON(code, Response{
 		Status:  false,

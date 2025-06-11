@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"shofy/app/api/server"
+	middleware "shofy/middleware"
 	categoryHandler "shofy/modules/categories/handler"
 	categoryService "shofy/modules/categories/service"
 	chatHandler "shofy/modules/chat/handler"
@@ -11,6 +12,8 @@ import (
 	orderService "shofy/modules/orders/service"
 	productHandler "shofy/modules/product/handler"
 	pdService "shofy/modules/product/service"
+	rlHandler "shofy/modules/role/handler"
+	rlService "shofy/modules/role/service"
 	usHandler "shofy/modules/users/handler"
 	usService "shofy/modules/users/service"
 	"time"
@@ -38,10 +41,6 @@ func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 
 	v1Router := router.Group("/v1")
 
-	userService := usService.NewUserService(srv.DBPool)
-	userHandler := usHandler.NewUserHandler(userService)
-	userHandler.InitRoutes(v1Router)
-
 	// Public routes
 	authService := usService.NewAuthService(srv.DBPool)
 	authHandler := usHandler.NewAuthHandler(authService)
@@ -52,27 +51,35 @@ func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 	chatRouter.InitRoutes(v1Router)
 
 	// Product routes (tanpa autentikasi)
-	productService := pdService.NewProductService(srv.DBPool)
-	productHandler := productHandler.NewProductHandler(productService)
-	productHandler.InitRoutes(v1Router.Group("/products"))
-
-	categoryService := categoryService.NewCategoryService(srv.DBPool)
-	categoryHandler := categoryHandler.NewCategoryHandler(categoryService)
-	categoryHandler.InitRoutes(v1Router.Group("/categories"))
+	// productService := pdService.NewProductService(srv.DBPool)
+	// productHandler := productHandler.NewProductHandler(productService)
+	// productHandler.InitRoutes(v1Router.Group("/products"))
 
 	orderService := orderService.NewOrderService(srv.DBPool)
 	orderHandler := orderHandler.NewOrderHandler(orderService)
 	orderHandler.InitRoutes(v1Router.Group("/orders"))
 
 	// Protected routes
-	// protectedRoutes := v1Router.Group("")
-	// protectedRoutes.Use(middleware.AuthMiddleware())
-	// {
-	// 	// Product routes
-	// 	productService := pdService.NewProductService(srv.DBPool)
-	// 	productHandler := productHandler.NewProductHandler(productService)
-	// 	productHandler.InitRoutes(protectedRoutes.Group("/products"))
-	// }
+	protectedRoutes := v1Router.Group("")
+	protectedRoutes.Use(middleware.AuthMiddleware(), middleware.RequireRole([]string{"ADMIN", "SUPER_ADMIN"}))
+	{
+		// Product routes
+		productService := pdService.NewProductService(srv.DBPool)
+		productHandler := productHandler.NewProductHandler(productService)
+		productHandler.InitRoutes(protectedRoutes.Group("/products"))
+
+		categoryService := categoryService.NewCategoryService(srv.DBPool)
+		categoryHandler := categoryHandler.NewCategoryHandler(categoryService)
+		categoryHandler.InitRoutes(v1Router.Group("/categories"))
+
+		userService := usService.NewUserService(srv.DBPool)
+		userHandler := usHandler.NewUserHandler(userService)
+		userHandler.InitRoutes(v1Router.Group("/users"))
+
+		roleService := rlService.NewRoleService(srv.DBPool)
+		roleHandler := rlHandler.NewRoleHandler(roleService)
+		roleHandler.InitRoutes(v1Router.Group("/roles"))
+	}
 
 	return router
 }

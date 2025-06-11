@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"shofy/modules/users/service"
 	"shofy/utils/response"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -39,23 +40,33 @@ func (h *AuthHandler) SendOTP(c *gin.Context) {
 
 	// Validate phone number
 	if req.Phone == "" {
-		response.Success(c, http.StatusBadRequest, "Phone number is required", req.Phone)
+		response.NotSuccess(c, http.StatusBadRequest, "Phone number is required", req.Phone)
 		return
 	}
 
 	if req.Code == "" {
-		response.Success(c, http.StatusBadRequest, "Code is required", req.Phone)
+		response.NotSuccess(c, http.StatusBadRequest, "Code is required", req.Phone)
 		return
 	}
 
 	// Generate and send OTP
-	_, err := h.authService.GenerateAndSendOTP(c.Request.Context(), req)
+	data, err := h.authService.GenerateAndSendOTP(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// Check if the error is "Data Not Found"
+		if strings.Contains(err.Error(), "Data Not Found") {
+			response.Error(c, http.StatusNotFound, "Data not found")
+		} else {
+			response.Error(c, http.StatusInternalServerError, "Internal Server Error")
+		}
 		return
 	}
 
-	response.Success(c, http.StatusOK, "OTP sent successfully", req.Phone)
+	if data.Remarks == "User already logged" {
+		response.NotSuccess(c, http.StatusOK, "User already logged", nil)
+		return
+	}
+
+	response.Success(c, http.StatusOK, "OTP sent successfully", nil)
 
 }
 
@@ -72,7 +83,7 @@ func (h *AuthHandler) VerifyOTP(c *gin.Context) {
 	isValid, err := h.authService.VerifyOTP(c.Request.Context(), input.Otp)
 
 	if err != nil {
-		response.Success(c, http.StatusOK, "System OTP Error", err.Error())
+		response.NotSuccess(c, http.StatusOK, "System OTP Error", err.Error())
 		return
 	}
 

@@ -2,10 +2,12 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"errors"
 	"fmt"
 	"log"
+	"math/big"
 	db "shofy/db/sqlc"
 	notificationService "shofy/modules/notification/service"
 	"shofy/utils/jwt"
@@ -46,6 +48,11 @@ type PhoneResponse struct {
 	UserID       string `json:"user_id"`
 }
 
+type VerifyOTPResponse struct {
+	Token string   `json:"token"`
+	Role  []string `json:"role"`
+}
+
 func NewAuthService(pool *pgxpool.Pool) *AuthService {
 	return &AuthService{
 		db:              pool,
@@ -65,13 +72,12 @@ func (s *AuthService) GenerateAndSendOTP(ctx context.Context, req SendOTPRequest
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("Failed To Check Phone and CodeArea: %w", err)
+		return nil, fmt.Errorf("Data Not Found: %w", err)
 	}
 
 	dataUser, err := s.queries.FindUserLoginOtpByPhone(ctx, pgtype.Text{String: req.Phone, Valid: true})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			log.Println("Masuk", err)
 
 			// Jika tidak ada OTP sebelumnya, insert OTP baru
 			err = s.queries.InsertUserLoginOtp(ctx, db.InsertUserLoginOtpParams{
@@ -106,12 +112,12 @@ func (s *AuthService) GenerateAndSendOTP(ctx context.Context, req SendOTPRequest
 	log.Println("WHATSHAP", err)
 
 	// Send OTP via WhatsApp
-	err = s.whatsappService.SendOTP(checkPhone.CodeArea.String+checkPhone.Phone.String, otp)
-	log.Println("WHATSHAP 4")
+	// err = s.whatsappService.SendOTP(checkPhone.CodeArea.String+checkPhone.Phone.String, otp)
+	// log.Println("WHATSHAP 4")
 
-	if err != nil {
-		return nil, fmt.Errorf("failed to send OTP: %v", err)
-	}
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to send OTP: %v", err)
+	// }
 
 	return &PhoneResponse{
 		Phone_number: checkPhone.Phone.String,
@@ -163,5 +169,23 @@ func (s *AuthService) VerifyOTP(ctx context.Context, inputOTP string) (*VerifyOT
 
 	return &VerifyOTPResponse{
 		Token: token,
+		Role:  roleList,
 	}, nil
+}
+
+// GenerateOTP menghasilkan OTP numerik dengan panjang tertentu (4 atau 6 digit)
+func GenerateOTP(length int) (string, error) {
+	if length <= 0 {
+		return "", fmt.Errorf("invalid OTP length")
+	}
+
+	otp := ""
+	for i := 0; i < length; i++ {
+		n, err := rand.Int(rand.Reader, big.NewInt(10)) // angka 0–9
+		if err != nil {
+			return "", err
+		}
+		otp += n.String()
+	}
+	return otp, nil
 }

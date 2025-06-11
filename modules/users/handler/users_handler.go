@@ -3,13 +3,11 @@ package handler
 import (
 	"fmt"
 	"net/http"
-	"shofy/middleware"
 	"shofy/modules/users/service"
 	"shofy/utils/response"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type UserHandler struct {
@@ -23,75 +21,13 @@ func NewUserHandler(userService service.UserService) *UserHandler {
 }
 
 func (h *UserHandler) InitRoutes(router *gin.RouterGroup) {
-	users := router.Group("/users")
-	{
-		users.GET("/phone/:phone", h.GenerateOTPByPhone)
-		users.GET("/verify-otp/:otp/:user-id", h.VerifyOTP)
+	router.GET("/list", h.ListUsers)
+	router.POST("/", h.CreateUser)
+	router.GET("/logout/:user-id", h.Logout)
+	router.PUT("/:id", h.UpdateUser)
+	router.GET("/:id", h.GetUsersByID)
+	router.DELETE("/:id", h.DeleteUsersByID)
 
-		protected := users.Group("")
-		protected.Use(middleware.AuthMiddleware())
-		{
-			users.POST("/save", h.CreateUser)
-			users.GET("/list", h.ListUsers)
-			protected.POST("/logout/:user-id", h.Logout)
-			protected.PUT("/:user-id", h.UpdateUser)
-		}
-	}
-}
-
-func (h *UserHandler) GenerateOTPByPhone(c *gin.Context) {
-	phoneNumber := c.Param("phone")
-
-	if phoneNumber == "" {
-		response.Error(c, http.StatusOK, "Phone number is required")
-		return
-	}
-
-	// Convert phoneNumber string to pgtype.Text
-	phoneNumberText := pgtype.Text{String: phoneNumber, Valid: true}
-
-	users, err := h.userService.GenerateOTPByPhone(c.Request.Context(), phoneNumberText)
-
-	if err != nil {
-		response.Error(c, http.StatusOK, "Failed check phone number")
-		return
-	}
-
-	response.Success(c, http.StatusOK, "Check Phone successfully", users)
-}
-
-func (h *UserHandler) VerifyOTP(c *gin.Context) {
-	otpUser := c.Param("otp")
-	userId := c.Param("user-id")
-
-	if otpUser == "" {
-		response.Error(c, http.StatusOK, "OTP is required")
-		return
-	}
-
-	if userId == "" {
-		response.Error(c, http.StatusOK, "User id is required")
-		return
-	}
-
-	userIdNumber, err := strconv.Atoi(userId)
-
-	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid user ID")
-		return
-	}
-
-	result, err := h.userService.VerifyOTP(c.Request.Context(), otpUser, userIdNumber)
-
-	if err != nil {
-		response.Error(c, http.StatusOK, "Failed to Verify OTP")
-		return
-	}
-
-	// Set token in cookie
-	c.SetCookie("token", result.Token, 24*60*60, "/", "", false, true) // 24 hours expiry
-
-	response.Success(c, http.StatusOK, "Verify OTP successfully", result)
 }
 
 func (h *UserHandler) Logout(c *gin.Context) {
@@ -197,18 +133,18 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 	}
 	req.Page = int32(page)
 
-	pageSize, err := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+	pageSize, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	if err != nil || pageSize < 1 {
 		pageSize = 10
 	}
 	req.PageSize = int32(pageSize)
 
-	shopId, err := strconv.Atoi(c.Query("shop_id"))
-	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid shop ID")
-		return
-	}
-	req.ShopID = int32(shopId)
+	// shopId, err := strconv.Atoi(c.Query("shop_id"))
+	// if err != nil {
+	// 	response.Error(c, http.StatusBadRequest, "Invalid shop ID")
+	// 	return
+	// }
+	// req.ShopID = int32(shopId)
 
 	users, err := h.userService.ListUsers(c.Request.Context(), &req)
 	if err != nil {
@@ -217,4 +153,55 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusOK, "Users retrieved successfully", users)
+}
+
+func (h *UserHandler) GetUsersByID(c *gin.Context) {
+	userId := c.Param("id")
+	if userId == "" {
+		response.NotSuccess(c, http.StatusOK, "User ID is required", nil)
+		return
+	}
+
+	userIdInt, err := strconv.Atoi(userId)
+	if err != nil {
+		response.NotSuccess(c, http.StatusOK, "Invalid user ID", nil)
+		return
+	}
+
+	user, err := h.userService.GetUserByID(c.Request.Context(), int32(userIdInt))
+	if err != nil {
+		if err.Error() == "user not found" {
+			response.NotSuccess(c, http.StatusOK, "User not found", nil)
+			return
+		}
+		response.Error(c, http.StatusInternalServerError, fmt.Sprintf("Failed to get user: %v", err))
+		return
+	}
+
+	response.Success(c, http.StatusOK, "User retrieved successfully", user)
+}
+
+func (h *UserHandler) DeleteUsersByID(c *gin.Context) {
+	userId := c.Param("id")
+	if userId == "" {
+		response.NotSuccess(c, http.StatusOK, "User ID is required", nil)
+		return
+	}
+
+	userIdInt, err := strconv.Atoi(userId)
+	if err != nil {
+		response.NotSuccess(c, http.StatusOK, "Invalid user ID", nil)
+		return
+	}
+
+	if err := h.userService.DeleteUsersByID(c.Request.Context(), int32(userIdInt)); err != nil {
+		if err.Error() == "user not found" {
+			response.NotSuccess(c, http.StatusOK, "User not found", nil)
+			return
+		}
+		response.Error(c, http.StatusInternalServerError, fmt.Sprintf("Failed to delete user: %v", err))
+		return
+	}
+
+	response.Success(c, http.StatusOK, "User deleted successfully", nil)
 }
