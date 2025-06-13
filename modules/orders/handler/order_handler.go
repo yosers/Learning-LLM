@@ -115,7 +115,7 @@ func (h *OrderHandler) UpdateOrder(c *gin.Context) {
 
 	_, err = h.orderService.GetOrderById(c.Request.Context(), int32(id))
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "Order not found")
+		response.NotSuccess(c, http.StatusOK, "Order not found", nil)
 		return
 	}
 

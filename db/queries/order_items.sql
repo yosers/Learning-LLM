@@ -11,6 +11,3 @@ join products pr on pr.id = oi.product_id
 where o.id = $1;
 
 
-
-
-

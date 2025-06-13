@@ -95,6 +95,8 @@ func (s *orderService) CreateOrder(ctx context.Context, req *CreateOrderRequest)
 		},
 	}
 
+	// TAMBAHIN INSERT KE TABLE ORDER_ITEMS
+
 	result, err := s.queries.CreateOrder(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create order: %w", err)

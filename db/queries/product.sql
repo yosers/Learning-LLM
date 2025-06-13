@@ -69,3 +69,9 @@ RETURNING *;
 SELECT COUNT(*) 
 FROM products 
 WHERE deleted_at IS NULL;
+
+
+-- name: GetCountProductasdasd :one
+SELECT COUNT(*) 
+FROM products 
+WHERE deleted_at IS NULL;
