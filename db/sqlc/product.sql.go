@@ -153,17 +153,19 @@ func (q *Queries) GetCountProduct(ctx context.Context) (int64, error) {
 }
 
 const getProductByID = `-- name: GetProductByID :one
-SELECT id, 
-       name, 
-       description, 
-       price, 
-       stock, 
-       category_id,
-       created_at, 
-       updated_at, 
-       deleted_at
-FROM products
-WHERE id = $1 AND deleted_at IS NULL
+SELECT p.id, 
+       p.name, 
+       p.description, 
+       p.price, 
+       p.stock, 
+       c.name as category_id,
+       s.name as shop_id,
+       p.created_at, 
+       p.updated_at, 
+       p.deleted_at
+FROM products p inner join categories c on p.category_id = c.id
+inner join shops s on p.shop_id = s.id
+WHERE p.id = $1 AND p.deleted_at IS NULL
 `
 
 type GetProductByIDRow struct {
@@ -189,6 +191,7 @@ func (q *Queries) GetProductByID(ctx context.Context, id string) (GetProductByID
 		&i.Price,
 		&i.Stock,
 		&i.CategoryID,
+		&i.ShopID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,

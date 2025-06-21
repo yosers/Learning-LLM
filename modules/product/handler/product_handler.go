@@ -21,10 +21,14 @@ func NewProductHandler(productService service.ProductService) *ProductHandler {
 }
 
 func (h *ProductHandler) InitRoutes(router *gin.RouterGroup) {
-	router.GET("/list", h.ListProducts) // Changed from "" to "/list" for clarity
-	router.GET("/all", h.GetAllProducts)
+	router.GET("/", h.ListProducts) // Changed from "" to "/list" for clarity
+	//router.GET("/all", h.GetAllProducts)
 	router.POST("/", h.CreateProduct)
 	router.GET("/:id", h.GetProductByID)
+
+	//router.PUT("/:id", h.UpdateProduct)                                                  // Changed from ":id" to "/detail/:id" for clarity
+	//router.DELETE("/:id", middleware.RequireRole("PRODUCT_DELETE"), h.DeleteProductByID) // Changed from ":id" to "/detail/:id" for clarity
+
 	router.PUT("/:id", h.UpdateProduct)        // Changed from ":id" to "/detail/:id" for clarity
 	router.DELETE("/:id", h.DeleteProductByID) // Changed from ":id" to "/detail/:id" for clarity
 

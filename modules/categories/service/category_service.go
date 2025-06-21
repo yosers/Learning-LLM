@@ -98,6 +98,7 @@ func (s *categoryService) GetCategoriesPaginated(ctx context.Context, limit, off
 
 func (s *categoryService) DeleteByID(ctx context.Context, id string) error {
 	// Convert string ID to int32
+
 	var categoryID int32
 	_, err := fmt.Sscanf(id, "%d", &categoryID)
 	if err != nil {
