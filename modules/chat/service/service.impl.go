@@ -2,18 +2,18 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"net/http"
 	db "shofy/db/sqlc"
 	"shofy/modules/chat/model"
+	"strings"
 
-	azureService "shofy/modules/azure/service"
-
-	openaiService "shofy/modules/gpt/service"
+	deepinfraService "shofy/modules/deepinfra/service"
 
 	utils "shofy/utils"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/openai/openai-go"
 )
 
 type ChatService struct {
@@ -22,53 +22,45 @@ type ChatService struct {
 
 	// GPTService *service.GPTService
 	// AzureOpenAI *azureService.AzureOpenAI
-	OpenAIService *openaiService.OpenAIService
+	OpenAIService *deepinfraService.OpenAIService
 }
 
-func NewChatService(ctx context.Context, dbPool *pgxpool.Pool, http *http.Client, queries *db.Queries, azureOpenAI *azureService.AzureOpenAI) *ChatService {
-	// gptService := service.NewGPTService(ctx, dbPool, http, queries)
-	openaiService := openaiService.NewOpenAIService(ctx)
+func NewChatService(ctx context.Context, dbPool *pgxpool.Pool, queries *db.Queries) *ChatService {
+	openaiService := deepinfraService.NewOpenAIService(ctx)
 	return &ChatService{
 		DBPool:        dbPool,
 		Queries:       queries,
 		OpenAIService: openaiService,
-		// AzureOpenAI: azureOpenAI,
-		// GPTService: gptService,
 	}
 }
 
 func (s *ChatService) CreateChat(ctx context.Context, chat model.ChatPayload, channelID int) (model.ChatResponse, int, error) {
+
 	session, err := s.Queries.GetCurrentSessions(ctx, db.GetCurrentSessionsParams{
 		ChannelID: int32(channelID),
-		UserID:    1,
+		UserID:    2,
 	})
-	//
+
 	var hasNoSession bool = false
-	messages := []openai.ChatCompletionMessageParamUnion{}
+	messages := []model.ChatMessage{}
 	if err != nil {
-		// no session found, create a new session
+		log.Println("WHATSHAP err 2: " + err.Error())
 		session, err = s.Queries.CreateSession(ctx, db.CreateSessionParams{
 			ChannelID: int32(channelID),
-			UserID:    1,
+			UserID:    2,
 		})
 		if err != nil {
+			log.Println("WHATSHAP err 3: " + err.Error())
 			return model.ChatResponse{}, http.StatusInternalServerError, err
 		}
 		hasNoSession = true
 	} else {
-		// Get conversation by session id
 		conversations, err := s.Queries.GetConversationsBySessionID(ctx, session.ID)
 		if err != nil {
-			// do nothing if no conversation found
 			hasNoSession = true
 		}
-
 		for _, conversation := range conversations {
-			if conversation.Role == "user" {
-				messages = append(messages, openai.UserMessage(conversation.Message))
-			} else if conversation.Role == "assistant" {
-				messages = append(messages, openai.AssistantMessage(conversation.Message))
-			}
+			messages = append(messages, model.ChatMessage{Role: conversation.Role, Content: conversation.Message})
 		}
 	}
 
@@ -79,15 +71,16 @@ func (s *ChatService) CreateChat(ctx context.Context, chat model.ChatPayload, ch
 	})
 
 	if hasNoSession {
-		messages = append(messages, openai.SystemMessage(utils.PromptFirstMessage))
+		messages = append(messages, model.ChatMessage{Role: "user", Content: conversation.Message})
 	}
 
-	messages = append(messages, openai.UserMessage(conversation.Message))
+	messages = append(messages, model.ChatMessage{Role: "user", Content: conversation.Message})
 
 	chatResponse, status, err := s.OpenAIService.ChatCompletion(ctx, messages)
 	if err != nil {
 		return chatResponse, status, err
 	}
+
 	thinkingProcess := utils.ExtractThinkingProcess(chatResponse.Message)
 	_, err = s.Queries.CreateConversation(ctx, db.CreateConversationParams{
 		SessionID: session.ID,
@@ -100,4 +93,54 @@ func (s *ChatService) CreateChat(ctx context.Context, chat model.ChatPayload, ch
 	}
 
 	return chatResponse, status, nil
+}
+
+func (s *ChatService) isProductRelated(ctx context.Context, message string) bool {
+	classificationPrompt := []model.ChatMessage{
+		{Role: "system", Content: "Apakah ini pertanyaan tentang produk seperti stok, nama produk, harga? Jawab hanya 'ya' atau 'tidak'."},
+		{Role: "user", Content: message},
+	}
+
+	response, _, err := s.OpenAIService.ChatCompletion(ctx, classificationPrompt)
+	if err != nil {
+		log.Println("Classification failed:", err)
+		return false
+	}
+
+	normalized := strings.ToLower(strings.TrimSpace(response.Message))
+	return strings.Contains(normalized, "ya")
+}
+
+func (s *ChatService) checkStockByKeyword(ctx context.Context, userMsg string) (string, error) {
+	products, err := s.Queries.GetAllProducts(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	for _, p := range products {
+		if strings.Contains(strings.ToLower(userMsg), strings.ToLower(p.Name)) {
+			return fmt.Sprintf("Stok produk %s tersedia sebanyak %d dengan harga Rp%d", p.Name, p.Stock, p.Price), nil
+		}
+	}
+	return "Maaf, saya tidak menemukan produk yang Anda maksud.", nil
+}
+
+func (s *ChatService) ChatCompletion(ctx context.Context, messages []model.ChatMessage) (model.ChatResponse, int, error) {
+	return s.OpenAIService.ChatCompletion(ctx, messages)
+}
+
+func (s *ChatService) GetAllProductsAsString(ctx context.Context) (string, error) {
+	products, err := s.Queries.GetAllProducts(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	var builder strings.Builder
+	for _, p := range products {
+		log.Println("Product value:", p.Name, p.Stock, p.Price)
+
+		builder.WriteString(fmt.Sprintf("- %s (stok: %d, harga: Rp%d)\n", p.Name, p.Stock, p.Price))
+	}
+
+	return builder.String(), nil
 }
