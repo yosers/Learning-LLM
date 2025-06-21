@@ -42,6 +42,7 @@ type CreateUserRequest struct {
 	City       string `json:"city"`
 	Country    string `json:"country"`
 	PostalCode string `json:"postal_code"`
+	CodeArea   string `json:"code_area"` // Optional, can be empty
 }
 
 type UpdateUserRequest struct {
@@ -99,6 +100,13 @@ func (s *userService) Logout(ctx context.Context, token string, userId int) erro
 }
 
 func (s *userService) CreateUser(ctx context.Context, req *CreateUserRequest) (*UserResponse, error) {
+
+	checkPhone, err := s.queries.FindUserByPhone(ctx, pgtype.Text{String: req.Phone, Valid: true})
+
+	if checkPhone.ID != 0 {
+		return nil, fmt.Errorf("Phone already exist")
+	}
+
 	// Create user
 	user, err := s.queries.CreateUser(ctx, db.CreateUserParams{
 		ShopID: req.ShopID,
@@ -115,7 +123,12 @@ func (s *userService) CreateUser(ctx context.Context, req *CreateUserRequest) (*
 			Valid: true,
 		},
 	})
+
+	log.Println("DATA USER:", user.ID, user.ShopID, user.Email.String, user.Phone.String)
+	// Check for errors
+
 	if err != nil {
+		log.Println("Error creating user:", err)
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
@@ -152,6 +165,8 @@ func (s *userService) CreateUser(ctx context.Context, req *CreateUserRequest) (*
 		},
 	})
 	if err != nil {
+		log.Println("Error creating user:", err)
+
 		return nil, fmt.Errorf("failed to create user profile: %w", err)
 	}
 

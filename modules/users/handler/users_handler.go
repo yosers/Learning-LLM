@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 	"shofy/modules/users/service"
 	"shofy/utils/response"
@@ -84,7 +84,12 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 
 	user, err := h.userService.CreateUser(c.Request.Context(), &req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, fmt.Sprintf("Failed to create user: %v", err))
+		if err.Error() == "Phone already exist" {
+			response.Error(c, http.StatusConflict, "Phone already exist")
+			return
+		}
+		log.Printf("Error CreateUser", err)
+		response.Error(c, http.StatusInternalServerError, "Failed to create user")
 		return
 	}
 
@@ -92,7 +97,8 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 }
 
 func (h *UserHandler) UpdateUser(c *gin.Context) {
-	userId := c.Param("user-id")
+	userId := c.Param("id")
+
 	if userId == "" {
 		response.Error(c, http.StatusBadRequest, "User ID is required")
 		return
@@ -116,7 +122,8 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 			response.Error(c, http.StatusNotFound, "User not found")
 			return
 		}
-		response.Error(c, http.StatusInternalServerError, fmt.Sprintf("Failed to update user: %v", err))
+		log.Printf("Error UpdateUser user by ID %d: %v", userIdInt, err)
+		response.Error(c, http.StatusInternalServerError, "Failed to update user")
 		return
 	}
 
@@ -148,7 +155,7 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 
 	users, err := h.userService.ListUsers(c.Request.Context(), &req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, fmt.Sprintf("Failed to list users: %v", err))
+		response.Error(c, http.StatusInternalServerError, "Failed to list users:")
 		return
 	}
 
@@ -157,10 +164,6 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 
 func (h *UserHandler) GetUsersByID(c *gin.Context) {
 	userId := c.Param("id")
-	if userId == "" {
-		response.NotSuccess(c, http.StatusOK, "User ID is required", nil)
-		return
-	}
 
 	userIdInt, err := strconv.Atoi(userId)
 	if err != nil {
@@ -174,7 +177,8 @@ func (h *UserHandler) GetUsersByID(c *gin.Context) {
 			response.NotSuccess(c, http.StatusOK, "User not found", nil)
 			return
 		}
-		response.Error(c, http.StatusInternalServerError, fmt.Sprintf("Failed to get user: %v", err))
+		log.Printf("Error getting user by ID %d: %v", userIdInt, err)
+		response.Error(c, http.StatusInternalServerError, "Failed to GetUsersByID")
 		return
 	}
 
@@ -199,7 +203,8 @@ func (h *UserHandler) DeleteUsersByID(c *gin.Context) {
 			response.NotSuccess(c, http.StatusOK, "User not found", nil)
 			return
 		}
-		response.Error(c, http.StatusInternalServerError, fmt.Sprintf("Failed to delete user: %v", err))
+		log.Printf("Error Delete user by ID %d: %v", userIdInt, err)
+		response.Error(c, http.StatusInternalServerError, "Failed DeleteUsersByID")
 		return
 	}
 

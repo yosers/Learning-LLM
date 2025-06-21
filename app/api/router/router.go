@@ -64,15 +64,15 @@ func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 
 		categoryService := categoryService.NewCategoryService(srv.DBPool)
 		categoryHandler := categoryHandler.NewCategoryHandler(categoryService)
-		categoryHandler.InitRoutes(v1Router.Group("/categories"))
+		categoryHandler.InitRoutes(protectedRoutes.Group("/categories"))
 
 		userService := usService.NewUserService(srv.DBPool)
 		userHandler := usHandler.NewUserHandler(userService)
-		userHandler.InitRoutes(v1Router.Group("/users"))
+		userHandler.InitRoutes(protectedRoutes.Group("/users"))
 
 		roleService := rlService.NewRoleService(srv.DBPool)
 		roleHandler := rlHandler.NewRoleHandler(roleService)
-		roleHandler.InitRoutes(v1Router.Group("/roles"))
+		roleHandler.InitRoutes(protectedRoutes.Group("/roles"))
 	}
 
 	return router
