@@ -3,12 +3,20 @@ INSERT INTO user_login_otp (user_id, otp)
 VALUES ($1, $2);
 
 -- name: VerifyOtp :one
-SELECT * FROM user_login_otp
+SELECT CASE
+       WHEN expires_at < (NOW() AT TIME ZONE 'UTC') THEN 'EXPIRED'
+       WHEN is_used = TRUE THEN 'USED'
+       ELSE 'VALID'
+     END as status, user_id
+FROM user_login_otp
 WHERE otp = $1
-    AND expires_at >= (NOW() AT TIME ZONE 'UTC')
-    AND is_used = FALSE
 ORDER BY created_at DESC
 LIMIT 1;
+
+-- name: CountValidOtps :one
+SELECT COUNT(*) FROM user_login_otp
+WHERE otp = $1
+  AND expires_at >= (NOW() AT TIME ZONE 'UTC');
 
 -- name: UpdateIsUsed :exec
 UPDATE user_login_otp

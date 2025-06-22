@@ -72,7 +72,10 @@ func (s *AuthService) GenerateAndSendOTP(ctx context.Context, req SendOTPRequest
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("Data Not Found: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("Data Not Found: %w", err)
+		}
+		return nil, fmt.Errorf("Error Database: %w", err)
 	}
 
 	dataUser, err := s.queries.FindUserLoginOtpByPhone(ctx, pgtype.Text{String: req.Phone, Valid: true})
@@ -85,7 +88,7 @@ func (s *AuthService) GenerateAndSendOTP(ctx context.Context, req SendOTPRequest
 				Otp:    otp,
 			})
 			if err != nil {
-				return nil, fmt.Errorf("failed to store OTP: %w", err)
+				return nil, fmt.Errorf("Failed to store OTP: %w", err)
 			}
 		}
 	} else {
@@ -128,7 +131,24 @@ func (s *AuthService) GenerateAndSendOTP(ctx context.Context, req SendOTPRequest
 
 func (s *AuthService) VerifyOTP(ctx context.Context, inputOTP string) (*VerifyOTPResponse, error) {
 
+	count, err := s.queries.CountValidOtps(ctx, inputOTP)
+
+	if err != nil {
+		log.Println("Error counting OTP:", err)
+		return nil, err
+	}
+	log.Print("Count Valid OTPs: ", count)
+	if count > 1 {
+		return nil, fmt.Errorf("OTP conflict: multiple valid entries found")
+	}
+
 	otpData, err := s.queries.VerifyOtp(ctx, inputOTP)
+
+	if otpData.Status == "EXPIRED" {
+		return nil, fmt.Errorf("OTP has expired")
+	} else if otpData.Status == "USED" {
+		return nil, fmt.Errorf("OTP has already been used")
+	}
 
 	if err != nil {
 		log.Println("Failed to verify OTP in User Login OTP:", err)

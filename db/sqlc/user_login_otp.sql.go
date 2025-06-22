@@ -11,6 +11,19 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countValidOtps = `-- name: CountValidOtps :one
+SELECT COUNT(*) FROM user_login_otp
+WHERE otp = $1
+  AND expires_at >= (NOW() AT TIME ZONE 'UTC')
+`
+
+func (q *Queries) CountValidOtps(ctx context.Context, otp string) (int64, error) {
+	row := q.db.QueryRow(ctx, countValidOtps, otp)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const findUserLoginOtpByPhone = `-- name: FindUserLoginOtpByPhone :one
 SELECT ulo.id, ulo.user_id, ulo.otp, ulo.is_used, ulo.created_at, ulo.expires_at FROM user_login_otp ulo join users u
 ON ulo.user_id = u.id
@@ -112,24 +125,25 @@ func (q *Queries) UpdateOTPByUserId(ctx context.Context, arg UpdateOTPByUserIdPa
 }
 
 const verifyOtp = `-- name: VerifyOtp :one
-SELECT id, user_id, otp, is_used, created_at, expires_at FROM user_login_otp
+SELECT CASE
+       WHEN expires_at < (NOW() AT TIME ZONE 'UTC') THEN 'EXPIRED'
+       WHEN is_used = TRUE THEN 'USED'
+       ELSE 'VALID'
+     END as status, user_id
+FROM user_login_otp
 WHERE otp = $1
-    AND expires_at >= (NOW() AT TIME ZONE 'UTC')
-    AND is_used = FALSE
 ORDER BY created_at DESC
 LIMIT 1
 `
 
-func (q *Queries) VerifyOtp(ctx context.Context, otp string) (UserLoginOtp, error) {
+type VerifyOtpRow struct {
+	Status string
+	UserID int32
+}
+
+func (q *Queries) VerifyOtp(ctx context.Context, otp string) (VerifyOtpRow, error) {
 	row := q.db.QueryRow(ctx, verifyOtp, otp)
-	var i UserLoginOtp
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.Otp,
-		&i.IsUsed,
-		&i.CreatedAt,
-		&i.ExpiresAt,
-	)
+	var i VerifyOtpRow
+	err := row.Scan(&i.Status, &i.UserID)
 	return i, err
 }

@@ -66,7 +66,7 @@ func (s *WhatsAppService) SendOTP(phoneNumber string, otp string) error {
 					Type: "body",
 					Parameters: []Parameter{
 						{
-							Type: "text",
+							Type: "Keep your OTP private. Sharing it could let others access your account.",
 							Text: otp,
 						},
 					},
