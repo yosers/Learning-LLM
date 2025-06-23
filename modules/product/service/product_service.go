@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/big"
 
 	db "shofy/db/sqlc"
+	"shofy/utils"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -157,7 +159,10 @@ func (s *productService) ListProducts(ctx context.Context, limit, offset int32, 
 		Limit:  limit,
 		Offset: offset,
 	})
+
 	if err != nil {
+		log.Print("Error listing products2:", err)
+
 		return nil, err
 	}
 
@@ -187,8 +192,18 @@ func (s *productService) GetAllProducts(ctx context.Context) ([]db.GetAllProduct
 }
 
 func (s *productService) DeleteProductByID(ctx context.Context, id string) error {
+
+	// Check if product exists
+	_, err := s.queries.GetProductByID(ctx, id)
+	if err != nil {
+		if utils.IsDBDown(err) {
+			return fmt.Errorf("database is unreachable")
+		}
+		return fmt.Errorf("Product not found")
+	}
+
 	// Use SQLC's DeleteProduct method with the provided context
-	err := s.queries.DeleteProductByID(ctx, id)
+	err = s.queries.DeleteProductByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete product: %v", err)
 	}

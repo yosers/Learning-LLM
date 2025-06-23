@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"log"
 	"net/http"
 	"shofy/utils/jwt"
 	"shofy/utils/response"
@@ -12,7 +11,6 @@ import (
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		println(">>> AuthMiddleware called")
 
 		var tokenString string
 		var tokenFound bool
@@ -22,12 +20,9 @@ func AuthMiddleware() gin.HandlerFunc {
 			tokenString = cookie
 			tokenFound = true
 		}
-		println(">>> Token called", tokenString)
 
 		// If no token in cookie, check Authorization header
 		if !tokenFound {
-			println(">>> Header called", c.GetHeader("Authorization"))
-
 			authHeader := c.GetHeader("Authorization")
 			if authHeader != "" {
 				// Check if the header starts with "Bearer "
@@ -41,7 +36,6 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		// If no token found in either cookie or header
 		if !tokenFound {
-			println(">>> Token not Found", c.GetHeader("No authentication token provided"))
 
 			response.Error(c, http.StatusUnauthorized, "No authentication token provided")
 			c.Abort()
@@ -66,8 +60,6 @@ func AuthMiddleware() gin.HandlerFunc {
 func RequireRole(requiredRoles []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		value, exists := c.Get("user_claims")
-		log.Println("RequireRole value:", value)
-		log.Println("Required Roles:", requiredRoles)
 
 		if !exists {
 			c.AbortWithStatusJSON(403, gin.H{"error": "Unauthorized"})
