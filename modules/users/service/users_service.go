@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	db "shofy/db/sqlc"
+	model "shofy/modules/users/model"
 	"shofy/utils/jwt"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -15,10 +16,10 @@ import (
 
 type UserService interface {
 	Logout(ctx context.Context, token string, userId int) error
-	CreateUser(ctx context.Context, req *CreateUserRequest) (*UserResponse, error)
-	UpdateUser(ctx context.Context, userId int32, req *UpdateUserRequest) (*UserResponse, error)
-	ListUsers(ctx context.Context, req *ListUsersRequest) (*ListUsersResponse, error)
-	GetUserByID(ctx context.Context, id int32) (UserResponse, error)
+	CreateUser(ctx context.Context, req *model.CreateUserRequest) (*model.UserResponse, error)
+	UpdateUser(ctx context.Context, userId int32, req *model.UpdateUserRequest) (*model.UserResponse, error)
+	ListUsers(ctx context.Context, req *model.ListUsersRequest) (*model.ListUsersResponse, error)
+	GetUserByID(ctx context.Context, id int32) (model.UserResponse, error)
 	DeleteUsersByID(ctx context.Context, id int32) error
 }
 
@@ -30,60 +31,6 @@ func NewUserService(dbPool *pgxpool.Pool) UserService {
 
 type userService struct {
 	queries *db.Queries
-}
-
-type CreateUserRequest struct {
-	ShopID     int32  `json:"shop_id"`
-	Email      string `json:"email"`
-	Phone      string `json:"phone"`
-	FirstName  string `json:"first_name"`
-	LastName   string `json:"last_name"`
-	Address    string `json:"address"`
-	City       string `json:"city"`
-	Country    string `json:"country"`
-	PostalCode string `json:"postal_code"`
-	CodeArea   string `json:"code_area"` // Optional, can be empty
-}
-
-type UpdateUserRequest struct {
-	FirstName  string `json:"first_name"`
-	LastName   string `json:"last_name"`
-	Address    string `json:"address"`
-	City       string `json:"city"`
-	Country    string `json:"country"`
-	PostalCode string `json:"postal_code"`
-}
-
-type ListUsersRequest struct {
-	Page     int32 `json:"page"`
-	PageSize int32 `json:"limit"`
-	// ShopID   int32 `json:"shop_id"`
-}
-
-type UserResponse struct {
-	ID         int32  `json:"id"`
-	ShopID     int32  `json:"shop_id"`
-	Email      string `json:"email,omitempty"`
-	Phone      string `json:"phone,omitempty"`
-	FirstName  string `json:"first_name"`
-	LastName   string `json:"last_name"`
-	Address    string `json:"address"`
-	City       string `json:"city"`
-	Country    string `json:"country"`
-	PostalCode string `json:"postal_code"`
-	IsActive   bool   `json:"is_active"`
-}
-
-type ListUsersResponse struct {
-	Users      []UserResponse `json:"users"`
-	Total      int32          `json:"total_items"`
-	Page       int32          `json:"current_page"`
-	PageSize   int32          `json:"page_size"`
-	TotalPages int32          `json:"total_pages"`
-}
-
-type LogoutRequest struct {
-	UserID string `json:"user_id"`
 }
 
 func (s *userService) Logout(ctx context.Context, token string, userId int) error {
@@ -103,7 +50,7 @@ func (s *userService) Logout(ctx context.Context, token string, userId int) erro
 	return nil
 }
 
-func (s *userService) CreateUser(ctx context.Context, req *CreateUserRequest) (*UserResponse, error) {
+func (s *userService) CreateUser(ctx context.Context, req *model.CreateUserRequest) (*model.UserResponse, error) {
 
 	checkPhone, err := s.queries.FindUserByPhone(ctx, pgtype.Text{String: req.Phone, Valid: true})
 
@@ -174,7 +121,7 @@ func (s *userService) CreateUser(ctx context.Context, req *CreateUserRequest) (*
 		return nil, fmt.Errorf("failed to create user profile: %w", err)
 	}
 
-	return &UserResponse{
+	return &model.UserResponse{
 		ID:         user.ID,
 		ShopID:     user.ShopID,
 		Email:      user.Email.String,
@@ -189,7 +136,7 @@ func (s *userService) CreateUser(ctx context.Context, req *CreateUserRequest) (*
 	}, nil
 }
 
-func (s *userService) UpdateUser(ctx context.Context, userId int32, req *UpdateUserRequest) (*UserResponse, error) {
+func (s *userService) UpdateUser(ctx context.Context, userId int32, req *model.UpdateUserRequest) (*model.UserResponse, error) {
 	// Get existing user
 	user, err := s.queries.GetUser(ctx, userId)
 	if err != nil {
@@ -237,7 +184,7 @@ func (s *userService) UpdateUser(ctx context.Context, userId int32, req *UpdateU
 		return nil, fmt.Errorf("failed to get updated user profile: %w", err)
 	}
 
-	return &UserResponse{
+	return &model.UserResponse{
 		ID:         user.ID,
 		ShopID:     user.ShopID,
 		Email:      user.Email.String,
@@ -252,7 +199,7 @@ func (s *userService) UpdateUser(ctx context.Context, userId int32, req *UpdateU
 	}, nil
 }
 
-func (s *userService) ListUsers(ctx context.Context, req *ListUsersRequest) (*ListUsersResponse, error) {
+func (s *userService) ListUsers(ctx context.Context, req *model.ListUsersRequest) (*model.ListUsersResponse, error) {
 	// Get total count first
 	total, err := s.queries.CountUsers(ctx)
 	if err != nil {
@@ -279,15 +226,16 @@ func (s *userService) ListUsers(ctx context.Context, req *ListUsersRequest) (*Li
 		return nil, fmt.Errorf("failed to list users: %w", err)
 	}
 
+	log.Println("Total users:", users)
 	// Get user profiles for all users
-	userResponses := make([]UserResponse, 0, len(users))
+	userResponses := make([]model.UserResponse, 0, len(users))
 	for _, user := range users {
 		profile, err := s.queries.GetUserProfile(ctx, user.ID)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("failed to get user profile: %w", err)
 		}
 
-		userResponses = append(userResponses, UserResponse{
+		userResponses = append(userResponses, model.UserResponse{
 			ID:         user.ID,
 			ShopID:     user.ShopID,
 			Email:      user.Email.String,
@@ -299,10 +247,11 @@ func (s *userService) ListUsers(ctx context.Context, req *ListUsersRequest) (*Li
 			Country:    profile.Country.String,
 			PostalCode: profile.PostalCode.String,
 			IsActive:   user.IsActive.Bool,
+			Shopname:   user.Shopname,
 		})
 	}
 
-	return &ListUsersResponse{
+	return &model.ListUsersResponse{
 		Users:      userResponses,
 		Total:      int32(total),
 		Page:       req.Page,
@@ -311,24 +260,24 @@ func (s *userService) ListUsers(ctx context.Context, req *ListUsersRequest) (*Li
 	}, nil
 }
 
-func (s *userService) GetUserByID(ctx context.Context, id int32) (UserResponse, error) {
+func (s *userService) GetUserByID(ctx context.Context, id int32) (model.UserResponse, error) {
 	user, err := s.queries.GetUser(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return UserResponse{}, fmt.Errorf("user not found")
+			return model.UserResponse{}, fmt.Errorf("user not found")
 		}
-		return UserResponse{}, fmt.Errorf("failed to get user: %w", err)
+		return model.UserResponse{}, fmt.Errorf("failed to get user: %w", err)
 	}
 
 	profile, err := s.queries.GetUserProfile(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return UserResponse{}, fmt.Errorf("user profile not found")
+			return model.UserResponse{}, fmt.Errorf("user profile not found")
 		}
-		return UserResponse{}, fmt.Errorf("failed to get user profile: %w", err)
+		return model.UserResponse{}, fmt.Errorf("failed to get user profile: %w", err)
 	}
 
-	return UserResponse{
+	return model.UserResponse{
 		ID:         user.ID,
 		ShopID:     user.ShopID,
 		Email:      user.Email.String,
@@ -340,6 +289,7 @@ func (s *userService) GetUserByID(ctx context.Context, id int32) (UserResponse, 
 		Country:    profile.Country.String,
 		PostalCode: profile.PostalCode.String,
 		IsActive:   user.IsActive.Bool,
+		Shopname:   user.Name,
 	}, nil
 }
 

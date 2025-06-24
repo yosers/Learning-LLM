@@ -3,6 +3,7 @@ package handler
 import (
 	"log"
 	"net/http"
+	model "shofy/modules/users/model"
 	"shofy/modules/users/service"
 	"shofy/utils/response"
 	"strconv"
@@ -31,7 +32,7 @@ func (h *UserHandler) InitRoutes(router *gin.RouterGroup) {
 }
 
 func (h *UserHandler) Logout(c *gin.Context) {
-	var req service.LogoutRequest
+	var req model.LogoutRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "Invalid request body")
@@ -77,7 +78,7 @@ func (h *UserHandler) Logout(c *gin.Context) {
 }
 
 func (h *UserHandler) CreateUser(c *gin.Context) {
-	var req service.CreateUserRequest
+	var req model.CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "Invalid request body")
 		return
@@ -111,7 +112,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	var req service.UpdateUserRequest
+	var req model.UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "Invalid request body")
 		return
@@ -132,7 +133,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 }
 
 func (h *UserHandler) ListUsers(c *gin.Context) {
-	var req service.ListUsersRequest
+	var req model.ListUsersRequest
 
 	// Get query parameters
 	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))

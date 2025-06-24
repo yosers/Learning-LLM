@@ -6,37 +6,17 @@ import (
 	"errors"
 	"fmt"
 	db "shofy/db/sqlc"
+	role_model "shofy/modules/role/model"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type RoleService interface {
-	ListRole(ctx context.Context) (*ListRoleResponse, error)
-	RolesByID(ctx context.Context, idRole int32) (*RoleResponse, error)
+	ListRole(ctx context.Context) (*role_model.ListRoleResponse, error)
+	RolesByID(ctx context.Context, idRole int32) (*role_model.RoleResponse, error)
 	DeleteRolesByID(ctx context.Context, idRole int32) error
-	UpdateRolesById(ctx context.Context, req *UpdateRolesRequest) error
-	CreateRoles(ctx context.Context, req *CreateRolesRequest) (*RoleResponse, error)
-}
-
-type ListRoleResponse struct {
-	Roles []RoleResponse `json:"roles"`
-}
-
-type RoleResponse struct {
-	Id       int32  `json:"id"`
-	Name     string `json:"name"`
-	IsActive bool   `json:"is_active"`
-}
-
-type UpdateRolesRequest struct {
-	Name      string `json:"name"`
-	Is_active bool   `json:"is_active"`
-	Id        int32  `json:"id"`
-}
-
-type CreateRolesRequest struct {
-	Name     string `json:"name"`
-	IsActive bool   `json:"is_active"`
+	UpdateRolesById(ctx context.Context, req *role_model.UpdateRolesRequest) error
+	CreateRoles(ctx context.Context, req *role_model.CreateRolesRequest) (*role_model.RoleResponse, error)
 }
 
 func NewRoleService(dbPool *pgxpool.Pool) RoleService {
@@ -49,27 +29,27 @@ type roleService struct {
 	queries *db.Queries
 }
 
-func (s *roleService) ListRole(ctx context.Context) (*ListRoleResponse, error) {
+func (s *roleService) ListRole(ctx context.Context) (*role_model.ListRoleResponse, error) {
 	rows, err := s.queries.ListRole(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var roles []RoleResponse
+	var roles []role_model.RoleResponse
 	for _, row := range rows {
-		roles = append(roles, RoleResponse{
+		roles = append(roles, role_model.RoleResponse{
 			Id:   row.ID,
 			Name: row.Name,
 		})
 	}
 
-	return &ListRoleResponse{
+	return &role_model.ListRoleResponse{
 		Roles: roles,
 	}, nil
 
 }
 
-func (s *roleService) RolesByID(ctx context.Context, idRole int32) (*RoleResponse, error) {
+func (s *roleService) RolesByID(ctx context.Context, idRole int32) (*role_model.RoleResponse, error) {
 	rows, err := s.queries.GetRoleByID(ctx, idRole)
 
 	if err != nil {
@@ -79,7 +59,7 @@ func (s *roleService) RolesByID(ctx context.Context, idRole int32) (*RoleRespons
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
-	return &RoleResponse{
+	return &role_model.RoleResponse{
 		Name: rows.Name,
 		Id:   rows.ID,
 	}, nil
@@ -103,7 +83,7 @@ func (s *roleService) DeleteRolesByID(ctx context.Context, idRole int32) error {
 	return nil
 }
 
-func (s *roleService) UpdateRolesById(ctx context.Context, req *UpdateRolesRequest) error {
+func (s *roleService) UpdateRolesById(ctx context.Context, req *role_model.UpdateRolesRequest) error {
 	_, err := s.queries.GetRoleByID(ctx, req.Id)
 
 	if err != nil {
@@ -125,7 +105,7 @@ func (s *roleService) UpdateRolesById(ctx context.Context, req *UpdateRolesReque
 	return nil
 }
 
-func (s *roleService) CreateRoles(ctx context.Context, req *CreateRolesRequest) (*RoleResponse, error) {
+func (s *roleService) CreateRoles(ctx context.Context, req *role_model.CreateRolesRequest) (*role_model.RoleResponse, error) {
 	// Cek apakah role dengan nama tersebut sudah ada
 	_, err := s.queries.GetRoleByName(ctx, req.Name)
 	if err == nil {
@@ -144,7 +124,7 @@ func (s *roleService) CreateRoles(ctx context.Context, req *CreateRolesRequest) 
 		return nil, fmt.Errorf("failed to create role: %w", err)
 	}
 
-	return &RoleResponse{
+	return &role_model.RoleResponse{
 		Id:       newRole.ID,
 		Name:     newRole.Name,
 		IsActive: newRole.IsActive,

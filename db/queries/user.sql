@@ -1,11 +1,11 @@
 -- name: GetUser :one
-SELECT * FROM users
-WHERE id = $1 and is_active = true LIMIT 1;
+SELECT us.*, s."name" FROM users us join shops s on us.shop_id = s.id 
+WHERE us.id = $1 and us.is_active = true LIMIT 1;
 
 -- name: ListUsers :many
-SELECT * FROM users
-WHERE  is_active = true
-ORDER BY created_at DESC
+SELECT us.*, s."name" as shopName FROM users us join shops s on us.shop_id = s.id 
+WHERE  us.is_active = true
+ORDER BY us.created_at DESC
 LIMIT $1 OFFSET $2;
 
 -- name: CountUsers :one

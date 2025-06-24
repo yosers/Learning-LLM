@@ -3,6 +3,7 @@ package handler
 import (
 	"log"
 	"net/http"
+	model "shofy/modules/role/model"
 	"shofy/modules/role/service"
 	"shofy/utils/response"
 	"strconv"
@@ -79,7 +80,7 @@ func (h *RoleHandler) DeleteRolesByID(c *gin.Context) {
 }
 
 func (h *RoleHandler) UpdateRolesById(c *gin.Context) {
-	var roleUpdate service.UpdateRolesRequest
+	var roleUpdate model.UpdateRolesRequest
 
 	if err := c.ShouldBindJSON(&roleUpdate); err != nil {
 		response.Error(c, http.StatusBadRequest, "Invalid request body")
@@ -102,7 +103,7 @@ func (h *RoleHandler) UpdateRolesById(c *gin.Context) {
 }
 
 func (h *RoleHandler) CreateRoles(c *gin.Context) {
-	var roleCreate service.CreateRolesRequest
+	var roleCreate model.CreateRolesRequest
 
 	if err := c.ShouldBindJSON(&roleCreate); err != nil {
 		response.Error(c, http.StatusBadRequest, "Invalid request body")
