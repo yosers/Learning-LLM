@@ -1,5 +1,7 @@
 package service
 
+import "time"
+
 type CreateUserRequest struct {
 	ShopID     int32  `json:"shop_id"`
 	Email      string `json:"email"`
@@ -53,4 +55,32 @@ type ListUsersResponse struct {
 
 type LogoutRequest struct {
 	UserID string `json:"user_id"`
+}
+
+type OTPData struct {
+	PhoneNumber string
+	OTP         string
+	ExpiresAt   time.Time
+}
+
+type SendOTPRequest struct {
+	Code  string `json:"code"`
+	Phone string `json:"phone"`
+}
+
+type VerifyOTP struct {
+	Otp string `json:"otp"`
+}
+
+type PhoneResponse struct {
+	Phone_number string `json:"phone_number"`
+	Status       bool   `json:"status"`
+	Otp          string `json:"otp"`
+	Remarks      string `json:"remarks"`
+	UserID       string `json:"user_id"`
+}
+
+type VerifyOTPResponse struct {
+	Token string   `json:"token"`
+	Role  []string `json:"role"`
 }

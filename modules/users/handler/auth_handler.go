@@ -3,6 +3,7 @@ package handler
 import (
 	"log"
 	"net/http"
+	model "shofy/modules/users/model"
 	"shofy/modules/users/service"
 	"shofy/utils/response"
 	"strings"
@@ -31,7 +32,7 @@ func (h *AuthHandler) InitRoutes(r *gin.RouterGroup) {
 func (h *AuthHandler) SendOTP(c *gin.Context) {
 	log.Println("WHATSHAP")
 
-	var req service.SendOTPRequest
+	var req model.SendOTPRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "Invalid request body")
@@ -72,7 +73,7 @@ func (h *AuthHandler) SendOTP(c *gin.Context) {
 
 func (h *AuthHandler) VerifyOTP(c *gin.Context) {
 
-	var input service.VerifyOTP
+	var input model.VerifyOTP
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		response.Error(c, http.StatusBadRequest, "Invalid request body")
