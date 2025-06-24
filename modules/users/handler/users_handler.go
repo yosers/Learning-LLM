@@ -23,7 +23,7 @@ func NewUserHandler(userService service.UserService) *UserHandler {
 func (h *UserHandler) InitRoutes(router *gin.RouterGroup) {
 	router.GET("/list", h.ListUsers)
 	router.POST("/", h.CreateUser)
-	router.GET("/logout/:user-id", h.Logout)
+	router.POST("/logout", h.Logout)
 	router.PUT("/:id", h.UpdateUser)
 	router.GET("/:id", h.GetUsersByID)
 	router.DELETE("/:id", h.DeleteUsersByID)
@@ -31,9 +31,15 @@ func (h *UserHandler) InitRoutes(router *gin.RouterGroup) {
 }
 
 func (h *UserHandler) Logout(c *gin.Context) {
+	var req service.LogoutRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
 	// Get token from cookie or Authorization header
 	token := ""
-	userId := c.Param("user-id")
 
 	// Try to get from cookie first
 	if cookieToken, err := c.Cookie("token"); err == nil && cookieToken != "" {
@@ -51,12 +57,7 @@ func (h *UserHandler) Logout(c *gin.Context) {
 		return
 	}
 
-	if userId == "" {
-		response.Error(c, http.StatusOK, "User id is required")
-		return
-	}
-
-	userIdNumber, err := strconv.Atoi(userId)
+	userIdNumber, err := strconv.Atoi(req.UserID)
 
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, "Invalid user ID")

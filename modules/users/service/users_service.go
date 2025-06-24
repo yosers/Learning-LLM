@@ -82,6 +82,10 @@ type ListUsersResponse struct {
 	TotalPages int32          `json:"total_pages"`
 }
 
+type LogoutRequest struct {
+	UserID string `json:"user_id"`
+}
+
 func (s *userService) Logout(ctx context.Context, token string, userId int) error {
 	// Invalidate the token
 	if err := jwt.InvalidateToken(token); err != nil {
