@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 	"shofy/modules/role/service"
 	"shofy/utils/response"
@@ -21,7 +21,7 @@ func NewRoleHandler(roleService service.RoleService) *RoleHandler {
 }
 
 func (h *RoleHandler) InitRoutes(router *gin.RouterGroup) {
-	router.GET("/list", h.ListRoles)
+	router.GET("/", h.ListRoles)
 	router.POST("/", h.CreateRoles)
 	router.PUT("/", h.UpdateRolesById)
 	router.GET("/:id", h.RolesByID)
@@ -47,12 +47,11 @@ func (h *RoleHandler) RolesByID(c *gin.Context) {
 
 	role, err := h.roleService.RolesByID(c.Request.Context(), int32(idRole))
 	if err != nil {
+		if err.Error() == "Role not found" {
+			response.NotSuccess(c, http.StatusOK, "Role not found", nil)
+			return
+		}
 		response.Error(c, http.StatusInternalServerError, "Internal Server Error")
-		return
-	}
-
-	if role == nil {
-		response.Error(c, http.StatusNotFound, "Role not found")
 		return
 	}
 
@@ -69,10 +68,10 @@ func (h *RoleHandler) DeleteRolesByID(c *gin.Context) {
 	err = h.roleService.DeleteRolesByID(c.Request.Context(), int32(idRole))
 	if err != nil {
 		if err.Error() == "role not found" {
-			response.Error(c, http.StatusNotFound, "Role not found")
+			response.NotSuccess(c, http.StatusOK, "Role not found", nil)
 			return
 		}
-		response.Error(c, http.StatusInternalServerError, fmt.Sprintf("Failed to delete role: %v", err))
+		response.Error(c, http.StatusInternalServerError, "Failed to delete role")
 		return
 	}
 
@@ -91,10 +90,11 @@ func (h *RoleHandler) UpdateRolesById(c *gin.Context) {
 
 	if err != nil {
 		if err.Error() == "role not found" {
-			response.Error(c, http.StatusNotFound, "Role not found")
+			response.NotSuccess(c, http.StatusOK, "Role not found", nil)
 			return
 		}
-		response.Error(c, http.StatusInternalServerError, fmt.Sprintf("Failed to update user: %v", err))
+		log.Printf("Error Failed to update Roles", err)
+		response.Error(c, http.StatusInternalServerError, "Failed to update user")
 		return
 	}
 
@@ -111,7 +111,8 @@ func (h *RoleHandler) CreateRoles(c *gin.Context) {
 
 	role, err := h.roleService.CreateRoles(c.Request.Context(), &roleCreate)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, fmt.Sprintf("Failed to create role: %v", err))
+		log.Printf("Error creating role: %v", err)
+		response.Error(c, http.StatusInternalServerError, "Failed to create role")
 		return
 	}
 

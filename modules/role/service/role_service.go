@@ -74,7 +74,7 @@ func (s *roleService) RolesByID(ctx context.Context, idRole int32) (*RoleRespons
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("user not found")
+			return nil, fmt.Errorf("Role not found")
 		}
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
@@ -131,10 +131,7 @@ func (s *roleService) CreateRoles(ctx context.Context, req *CreateRolesRequest) 
 	if err == nil {
 		// Role ditemukan => return error
 		return nil, fmt.Errorf("role with name %s already exists", req.Name)
-	}
-
-	// Jika error bukan karena "data tidak ditemukan", return error
-	if !errors.Is(err, sql.ErrNoRows) {
+	} else if !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to check existing role: %w", err)
 	}
 
