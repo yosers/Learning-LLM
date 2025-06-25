@@ -143,13 +143,28 @@ func (q *Queries) FindUserByPhoneAndCode(ctx context.Context, arg FindUserByPhon
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, shop_id, email, unconfirmed_email, phone, code_area, unconfirmed_phone, is_active, created_at, updated_at, slug FROM users
-WHERE id = $1 and is_active = true LIMIT 1
+SELECT us.id, us.shop_id, us.email, us.unconfirmed_email, us.phone, us.code_area, us.unconfirmed_phone, us.is_active, us.created_at, us.updated_at, us.slug, s."name" FROM users us join shops s on us.shop_id = s.id 
+WHERE us.id = $1 and us.is_active = true LIMIT 1
 `
 
-func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
+type GetUserRow struct {
+	ID               int32
+	ShopID           int32
+	Email            pgtype.Text
+	UnconfirmedEmail pgtype.Text
+	Phone            pgtype.Text
+	CodeArea         pgtype.Text
+	UnconfirmedPhone pgtype.Text
+	IsActive         pgtype.Bool
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
+	Slug             pgtype.UUID
+	Name             string
+}
+
+func (q *Queries) GetUser(ctx context.Context, id int32) (GetUserRow, error) {
 	row := q.db.QueryRow(ctx, getUser, id)
-	var i User
+	var i GetUserRow
 	err := row.Scan(
 		&i.ID,
 		&i.ShopID,
@@ -162,6 +177,7 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Slug,
+		&i.Name,
 	)
 	return i, err
 }
@@ -201,9 +217,9 @@ func (q *Queries) ListUserRole(ctx context.Context, id int32) ([]Role, error) {
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, shop_id, email, unconfirmed_email, phone, code_area, unconfirmed_phone, is_active, created_at, updated_at, slug FROM users
-WHERE  is_active = true
-ORDER BY created_at DESC
+SELECT us.id, us.shop_id, us.email, us.unconfirmed_email, us.phone, us.code_area, us.unconfirmed_phone, us.is_active, us.created_at, us.updated_at, us.slug, s."name" as shopName FROM users us join shops s on us.shop_id = s.id 
+WHERE  us.is_active = true
+ORDER BY us.created_at DESC
 LIMIT $1 OFFSET $2
 `
 
@@ -212,15 +228,30 @@ type ListUsersParams struct {
 	Offset int32
 }
 
-func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error) {
+type ListUsersRow struct {
+	ID               int32
+	ShopID           int32
+	Email            pgtype.Text
+	UnconfirmedEmail pgtype.Text
+	Phone            pgtype.Text
+	CodeArea         pgtype.Text
+	UnconfirmedPhone pgtype.Text
+	IsActive         pgtype.Bool
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
+	Slug             pgtype.UUID
+	Shopname         string
+}
+
+func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error) {
 	rows, err := q.db.Query(ctx, listUsers, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []User
+	var items []ListUsersRow
 	for rows.Next() {
-		var i User
+		var i ListUsersRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ShopID,
@@ -233,6 +264,7 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Slug,
+			&i.Shopname,
 		); err != nil {
 			return nil, err
 		}

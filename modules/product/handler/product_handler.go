@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	product_model "shofy/modules/product/model"
 	"shofy/modules/product/service"
@@ -67,7 +68,7 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 
 	product, err := h.productService.UpdateProduct(c.Request.Context(), &req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, fmt.Sprintf("Failed to update product: %v", err))
+		response.Error(c, http.StatusInternalServerError, "Failed to update product")
 		return
 	}
 
@@ -93,7 +94,7 @@ func (h *ProductHandler) GetProductByID(c *gin.Context) {
 
 	product, err := h.productService.GetProductByID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, http.StatusInternalServerError, "Failed to get product by ID")
 		return
 	}
 
@@ -124,7 +125,8 @@ func (h *ProductHandler) ListProducts(c *gin.Context) {
 
 	result, err := h.productService.ListProducts(c.Request.Context(), int32(q.Limit), int32(offset), q.CurrentPage)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		log.Print("Error listing products:", err)
+		response.Error(c, http.StatusInternalServerError, "Failed to ListProducts")
 		return
 	}
 
@@ -164,17 +166,16 @@ func (h *ProductHandler) DeleteProductByID(c *gin.Context) {
 		return
 	}
 
-	// Check if product exists
-	_, err := h.productService.GetProductByID(c.Request.Context(), id)
-	if err != nil {
-		response.Error(c, http.StatusNotFound, "Product not found")
-		return
-	}
-
 	// Proceed to delete
-	err = h.productService.DeleteProductByID(c.Request.Context(), id)
+	err := h.productService.DeleteProductByID(c.Request.Context(), id)
+
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		if err.Error() == "Product not found" {
+			response.NotSuccess(c, http.StatusOK, "Product not found", nil)
+			return
+		}
+
+		response.Error(c, http.StatusInternalServerError, "Failed to delete product")
 		return
 	}
 

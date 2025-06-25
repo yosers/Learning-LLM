@@ -39,3 +39,15 @@ type ChatResponse struct {
 	Message      string                 `json:"message"`
 	FullResponse ChatCompletionResponse `json:"full_response"`
 }
+
+type ChatSession struct {
+	UserID    int `json:"user_id" binding:"required"`
+	ChannelID int `json:"channel_id" binding:"required"`
+}
+
+type ChatMessagePayload struct {
+	Message   string `json:"message"`
+	SessionID int32  `json:"session_id" binding:"required"`
+	UserID    int    `json:"user_id" binding:"required"`
+	ChannelID int    `json:"channel_id" binding:"required"`
+}

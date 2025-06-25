@@ -10,59 +10,31 @@ import (
 	"math/big"
 	db "shofy/db/sqlc"
 	notificationService "shofy/modules/notification/service"
+	model "shofy/modules/users/model"
 	"shofy/utils/jwt"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type OTPData struct {
-	PhoneNumber string
-	OTP         string
-	ExpiresAt   time.Time
-}
-
-type SendOTPRequest struct {
-	Code  string `json:"code"`
-	Phone string `json:"phone"`
-}
-
-type VerifyOTP struct {
-	Otp string `json:"otp"`
-}
-
 type AuthService struct {
 	db              *pgxpool.Pool
 	whatsappService *notificationService.WhatsAppService
-	otpStore        map[string]*OTPData // In-memory store for demo, should use Redis/DB in production
+	otpStore        map[string]*model.OTPData // In-memory store for demo, should use Redis/DB in production
 	queries         *db.Queries
-}
-
-type PhoneResponse struct {
-	Phone_number string `json:"phone_number"`
-	Status       bool   `json:"status"`
-	Otp          string `json:"otp"`
-	Remarks      string `json:"remarks"`
-	UserID       string `json:"user_id"`
-}
-
-type VerifyOTPResponse struct {
-	Token string   `json:"token"`
-	Role  []string `json:"role"`
 }
 
 func NewAuthService(pool *pgxpool.Pool) *AuthService {
 	return &AuthService{
 		db:              pool,
 		whatsappService: notificationService.NewWhatsAppService(),
-		otpStore:        make(map[string]*OTPData),
+		otpStore:        make(map[string]*model.OTPData),
 		queries:         db.New(pool),
 	}
 }
 
-func (s *AuthService) GenerateAndSendOTP(ctx context.Context, req SendOTPRequest) (*PhoneResponse, error) {
+func (s *AuthService) GenerateAndSendOTP(ctx context.Context, req model.SendOTPRequest) (*model.PhoneResponse, error) {
 	// Generate 6 digit OTP
 	otp, err := GenerateOTP(6)
 
@@ -72,7 +44,10 @@ func (s *AuthService) GenerateAndSendOTP(ctx context.Context, req SendOTPRequest
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("Data Not Found: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("Data Not Found: %w", err)
+		}
+		return nil, fmt.Errorf("Error Database: %w", err)
 	}
 
 	dataUser, err := s.queries.FindUserLoginOtpByPhone(ctx, pgtype.Text{String: req.Phone, Valid: true})
@@ -85,7 +60,7 @@ func (s *AuthService) GenerateAndSendOTP(ctx context.Context, req SendOTPRequest
 				Otp:    otp,
 			})
 			if err != nil {
-				return nil, fmt.Errorf("failed to store OTP: %w", err)
+				return nil, fmt.Errorf("Failed to store OTP: %w", err)
 			}
 		}
 	} else {
@@ -102,7 +77,7 @@ func (s *AuthService) GenerateAndSendOTP(ctx context.Context, req SendOTPRequest
 				return nil, fmt.Errorf("failed to update OTP: %w", err)
 			}
 		} else {
-			return &PhoneResponse{
+			return &model.PhoneResponse{
 				Phone_number: checkPhone.Phone.String,
 				Status:       true,
 				Remarks:      "User already logged",
@@ -119,16 +94,33 @@ func (s *AuthService) GenerateAndSendOTP(ctx context.Context, req SendOTPRequest
 	// 	return nil, fmt.Errorf("failed to send OTP: %v", err)
 	// }
 
-	return &PhoneResponse{
+	return &model.PhoneResponse{
 		Phone_number: checkPhone.Phone.String,
 		Status:       true,
 		Otp:          otp,
 	}, nil
 }
 
-func (s *AuthService) VerifyOTP(ctx context.Context, inputOTP string) (*VerifyOTPResponse, error) {
+func (s *AuthService) VerifyOTP(ctx context.Context, inputOTP string) (*model.VerifyOTPResponse, error) {
+
+	count, err := s.queries.CountValidOtps(ctx, inputOTP)
+
+	if err != nil {
+		log.Println("Error counting OTP:", err)
+		return nil, err
+	}
+	log.Print("Count Valid OTPs: ", count)
+	if count > 1 {
+		return nil, fmt.Errorf("OTP conflict: multiple valid entries found")
+	}
 
 	otpData, err := s.queries.VerifyOtp(ctx, inputOTP)
+
+	if otpData.Status == "EXPIRED" {
+		return nil, fmt.Errorf("OTP has expired")
+	} else if otpData.Status == "USED" {
+		return nil, fmt.Errorf("OTP has already been used")
+	}
 
 	if err != nil {
 		log.Println("Failed to verify OTP in User Login OTP:", err)
@@ -167,7 +159,7 @@ func (s *AuthService) VerifyOTP(ctx context.Context, inputOTP string) (*VerifyOT
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	return &VerifyOTPResponse{
+	return &model.VerifyOTPResponse{
 		Token: token,
 		Role:  roleList,
 	}, nil

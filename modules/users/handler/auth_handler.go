@@ -3,6 +3,7 @@ package handler
 import (
 	"log"
 	"net/http"
+	model "shofy/modules/users/model"
 	"shofy/modules/users/service"
 	"shofy/utils/response"
 	"strings"
@@ -31,7 +32,7 @@ func (h *AuthHandler) InitRoutes(r *gin.RouterGroup) {
 func (h *AuthHandler) SendOTP(c *gin.Context) {
 	log.Println("WHATSHAP")
 
-	var req service.SendOTPRequest
+	var req model.SendOTPRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "Invalid request body")
@@ -40,12 +41,12 @@ func (h *AuthHandler) SendOTP(c *gin.Context) {
 
 	// Validate phone number
 	if req.Phone == "" {
-		response.NotSuccess(c, http.StatusBadRequest, "Phone number is required", req.Phone)
+		response.NotSuccess(c, http.StatusBadRequest, "Phone number is required", nil)
 		return
 	}
 
 	if req.Code == "" {
-		response.NotSuccess(c, http.StatusBadRequest, "Code is required", req.Phone)
+		response.NotSuccess(c, http.StatusBadRequest, "Code is required", nil)
 		return
 	}
 
@@ -55,9 +56,9 @@ func (h *AuthHandler) SendOTP(c *gin.Context) {
 		// Check if the error is "Data Not Found"
 		if strings.Contains(err.Error(), "Data Not Found") {
 			response.Error(c, http.StatusNotFound, "Data not found")
-		} else {
-			response.Error(c, http.StatusInternalServerError, "Internal Server Error")
+			return
 		}
+		response.Error(c, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 
@@ -72,7 +73,7 @@ func (h *AuthHandler) SendOTP(c *gin.Context) {
 
 func (h *AuthHandler) VerifyOTP(c *gin.Context) {
 
-	var input service.VerifyOTP
+	var input model.VerifyOTP
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		response.Error(c, http.StatusBadRequest, "Invalid request body")
@@ -83,6 +84,16 @@ func (h *AuthHandler) VerifyOTP(c *gin.Context) {
 	isValid, err := h.authService.VerifyOTP(c.Request.Context(), input.Otp)
 
 	if err != nil {
+		if strings.Contains(err.Error(), "OTP conflict: multiple valid entries found") {
+			response.NotSuccess(c, http.StatusOK, "Multiple OTP", "OTP conflict: Please request a new OTP")
+			return
+		} else if strings.Contains(err.Error(), "OTP has expired") {
+			response.NotSuccess(c, http.StatusOK, "OTP Expired", "Please request a new OTP")
+			return
+		} else if strings.Contains(err.Error(), "OTP has already been used") {
+			response.NotSuccess(c, http.StatusOK, "User already logged", "User already logged")
+			return
+		}
 		response.NotSuccess(c, http.StatusOK, "System OTP Error", err.Error())
 		return
 	}
