@@ -13,7 +13,7 @@ import (
 
 type OrderService interface {
 	CreateOrder(ctx context.Context, req *CreateOrderRequest) (*db.Order, error)
-	GetOrdersList(ctx context.Context, limit, offset int32, page int) (*PaginatedOrders, error)
+	GetOrdersList(ctx context.Context, limit, offset int32, page int, userID int32, status string) (*PaginatedOrders, error)
 	GetOrderById(ctx context.Context, id int32) (*db.Order, error)
 	UpdateOrder(ctx context.Context, req *UpdateOrderRequest) (*db.Order, error)
 	DeleteOrder(ctx context.Context, id int32) error
@@ -29,11 +29,20 @@ func NewOrderService(dbPool *pgxpool.Pool) OrderService {
 	}
 }
 
+type OrderItem struct {
+	ID        int32   `json:"id"`
+	OrderID   int32   `json:"order_id"`
+	ProductID string  `json:"product_id"`
+	Quantity  int32   `json:"quantity"`
+	UnitPrice float64 `json:"unit_price"`
+}
+
 type CreateOrderRequest struct {
-	ShopID int32   `json:"shop_id"`
-	UserID int32   `json:"user_id"`
-	Total  float64 `json:"total"`
-	Status string  `json:"status"`
+	ShopID int32       `json:"shop_id"`
+	UserID int32       `json:"user_id"`
+	Total  float64     `json:"total"`
+	Status string      `json:"status"`
+	Items  []OrderItem `json:"items"`
 }
 
 type PaginatedOrders struct {
@@ -79,36 +88,48 @@ func (s *orderService) CreateOrder(ctx context.Context, req *CreateOrderRequest)
 
 	params := db.CreateOrderParams{
 		ShopID: req.ShopID,
-		UserID: pgtype.Int4{
-			Int32: req.UserID,
-			Valid: true,
-		},
-		Total: pgtype.Numeric{
-			InfinityModifier: pgtype.Finite,
-			Valid:            true,
-			Int:              totalInCents,
-			Exp:              -2, // For 2 decimal places
-		},
-		Status: pgtype.Text{
-			String: req.Status,
-			Valid:  true,
-		},
+		UserID: pgtype.Int4{Int32: req.UserID, Valid: true},
+		Total:  pgtype.Numeric{InfinityModifier: pgtype.Finite, Valid: true, Int: totalInCents, Exp: -2},
+		Status: pgtype.Text{String: req.Status, Valid: true},
 	}
-
-	// TAMBAHIN INSERT KE TABLE ORDER_ITEMS
 
 	result, err := s.queries.CreateOrder(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create order: %w", err)
 	}
+
+	for _, item := range req.Items {
+		_, err := s.queries.CreateOrderItems(ctx, db.CreateOrderItemsParams{
+			OrderID: result.ID,
+			ProductID: pgtype.Text{
+				String: item.ProductID,
+				Valid:  true,
+			},
+			Quantity: item.Quantity,
+			UnitPrice: pgtype.Numeric{
+				Valid: true,
+				Int:   big.NewInt(int64(item.UnitPrice * 100)),
+				Exp:   -2,
+			},
+		})
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to insert order item: %w", err)
+		}
+	}
+
 	return &result, nil
 }
 
-func (s *orderService) GetOrdersList(ctx context.Context, limit, offset int32, page int) (*PaginatedOrders, error) {
+func (s *orderService) GetOrdersList(ctx context.Context, limit, offset int32, page int, userID int32, status string) (*PaginatedOrders, error) {
+
 	itemsRaw, err := s.queries.GetListOrders(ctx, db.GetListOrdersParams{
-		Limit:  limit,
-		Offset: offset,
+		Limit:   limit,
+		Offset:  offset,
+		Column3: userID,
+		Column4: status,
 	})
+
 	if err != nil {
 		return nil, err
 	}

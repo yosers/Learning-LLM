@@ -1,8 +1,7 @@
 -- name: CreateOrderItems :one
-INSERT INTO order_items (id, order_id, product_id, quantity, unit_price)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO order_items (order_id, product_id, quantity, unit_price)
+VALUES ($1, $2, $3, $4)
 RETURNING id, order_id, product_id, quantity, unit_price;
-
 
 -- name: GetOrderItemsByID :many
 select o.id as order_id, pr.name, pr.description, oi.quantity, oi.unit_price from orders o 

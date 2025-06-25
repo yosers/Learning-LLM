@@ -4,9 +4,18 @@ VALUES ($1, $2, $3, $4)
 RETURNING id, shop_id, user_id, total, status, created_at;
 
 -- name: GetListOrders :many
-SELECT o.id, s.name as shop_name, u.id as user_id, o.total, o.status, o.created_at
-FROM orders o inner join shops s on o.shop_id = s.id
-inner join users u on o.user_id = u.id
+SELECT 
+  o.id, 
+  s.name AS shop_name, 
+  u.id AS user_id, 
+  o.total, 
+  o.status, 
+  o.created_at
+FROM orders o
+JOIN shops s ON o.shop_id = s.id
+JOIN users u ON o.user_id = u.id
+WHERE ($3::int = 0 OR u.id = $3)
+  AND ($4::text = '' OR o.status = $4)
 ORDER BY o.created_at DESC
 LIMIT $1 OFFSET $2;
 

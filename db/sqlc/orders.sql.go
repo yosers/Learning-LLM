@@ -66,16 +66,27 @@ func (q *Queries) GetCountOrder(ctx context.Context) (int64, error) {
 }
 
 const getListOrders = `-- name: GetListOrders :many
-SELECT o.id, s.name as shop_name, u.id as user_id, o.total, o.status, o.created_at
-FROM orders o inner join shops s on o.shop_id = s.id
-inner join users u on o.user_id = u.id
+SELECT 
+  o.id, 
+  s.name AS shop_name, 
+  u.id AS user_id, 
+  o.total, 
+  o.status, 
+  o.created_at
+FROM orders o
+JOIN shops s ON o.shop_id = s.id
+JOIN users u ON o.user_id = u.id
+WHERE ($3::int = 0 OR u.id = $3)
+  AND ($4::text = '' OR o.status = $4)
 ORDER BY o.created_at DESC
 LIMIT $1 OFFSET $2
 `
 
 type GetListOrdersParams struct {
-	Limit  int32
-	Offset int32
+	Limit   int32
+	Offset  int32
+	Column3 int32
+	Column4 string
 }
 
 type GetListOrdersRow struct {
@@ -88,7 +99,12 @@ type GetListOrdersRow struct {
 }
 
 func (q *Queries) GetListOrders(ctx context.Context, arg GetListOrdersParams) ([]GetListOrdersRow, error) {
-	rows, err := q.db.Query(ctx, getListOrders, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, getListOrders,
+		arg.Limit,
+		arg.Offset,
+		arg.Column3,
+		arg.Column4,
+	)
 	if err != nil {
 		return nil, err
 	}
