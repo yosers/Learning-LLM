@@ -152,6 +152,19 @@ func (q *Queries) GetCountProduct(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const getCountProductasdasd = `-- name: GetCountProductasdasd :one
+SELECT COUNT(*) 
+FROM products 
+WHERE deleted_at IS NULL
+`
+
+func (q *Queries) GetCountProductasdasd(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, getCountProductasdasd)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getProductByID = `-- name: GetProductByID :one
 SELECT p.id, 
        p.name, 

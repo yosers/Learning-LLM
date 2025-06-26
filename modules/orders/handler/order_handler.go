@@ -48,9 +48,12 @@ func (h *OrderHandler) GetOrdersList(c *gin.Context) {
 		q.CurrentPage = 1
 	}
 
+	fmt.Println("q.UserID", q.UserID)
+	fmt.Println("q.Status", q.Status)
+
 	offset := (q.CurrentPage - 1) * q.Limit
 
-	result, err := h.orderService.GetOrdersList(c.Request.Context(), int32(q.Limit), int32(offset), q.CurrentPage)
+	result, err := h.orderService.GetOrdersList(c.Request.Context(), int32(q.Limit), int32(offset), q.CurrentPage, int32(q.UserID), q.Status)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -63,7 +66,6 @@ func (h *OrderHandler) GetOrdersList(c *gin.Context) {
 		"current_page": result.CurrentPage,
 		"limit":        result.Limit,
 	})
-
 }
 
 func (h *OrderHandler) GetOrderById(c *gin.Context) {
@@ -76,6 +78,7 @@ func (h *OrderHandler) GetOrderById(c *gin.Context) {
 
 	_, err = h.orderService.GetOrderById(c.Request.Context(), int32(id))
 	if err != nil {
+		fmt.Println("Error: ", err)
 		response.Error(c, http.StatusNotFound, "Order not found")
 		return
 	}
