@@ -14,6 +14,8 @@ import (
 	pdService "shofy/modules/product/service"
 	rlHandler "shofy/modules/role/handler"
 	rlService "shofy/modules/role/service"
+	shopsHandler "shofy/modules/shops/handler"
+	shopsService "shofy/modules/shops/service"
 	usHandler "shofy/modules/users/handler"
 	usService "shofy/modules/users/service"
 	"time"
@@ -58,6 +60,10 @@ func InitRouter(ctx context.Context, srv *server.Server) *gin.Engine {
 	orderService := orderService.NewOrderService(srv.DBPool)
 	orderHandler := orderHandler.NewOrderHandler(orderService)
 	orderHandler.InitRoutes(v1Router.Group("/orders"))
+
+	shopsService := shopsService.NewShopsService(srv.DBPool)
+	shopsHandler := shopsHandler.NewShopsHandler(shopsService)
+	shopsHandler.InitRoutes(v1Router.Group("/shops"))
 
 	// Protected routes
 	protectedRoutes := v1Router.Group("")

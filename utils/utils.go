@@ -20,3 +20,10 @@ func IsDBDown(err error) bool {
 	}
 	return false
 }
+
+func StringOrEmpty(s *string) string {
+	if s == nil || *s == "" {
+		return ""
+	}
+	return *s
+}
