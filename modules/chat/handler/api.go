@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"shofy/app/api/server"
 	db "shofy/db/sqlc"
@@ -9,6 +10,7 @@ import (
 	chatService "shofy/modules/chat/service"
 	deepinfraService "shofy/modules/deepinfra/service"
 	"shofy/utils/response"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -112,10 +114,42 @@ func (r *ChatRouter) MessageChat(c *gin.Context) {
 		return
 	}
 
+	shotpStr, err := r.ChatService.GetAllProductsAsString(ctx)
+	if err != nil {
+		response.NotSuccess(c, http.StatusInternalServerError, "Gagal mengambil data produk", nil)
+		return
+	}
+
 	// 💡 Sisipkan prompt system tentang produk
+	// System Prompt — menjelaskan role AI dan produk
 	systemPrompt := model.ChatMessage{
-		Role:    "system",
-		Content: "Berikut daftar produk tersedia:\n" + productsStr,
+		Role: "system",
+		Content: fmt.Sprintf(`Kamu adalah asisten virtual dari sebuah toko online bernama "Shofy".
+					Tugas kamu:
+					- Menjawab pertanyaan tentang produk yang dijual
+					- Menjelaskan detail dan stok barang
+					- Membantu pelanggan dalam proses pemesanan
+					- Memberikan jawaban yang relevan dan informatif
+
+					Berikan jawaban yang rapi dengan format seperti berikut:
+
+					Produk "sepatu" tersedia di:
+
+					1. Toko A
+					- Stok: 10
+					- Harga: Rp 100.000
+
+					2. Toko B
+					- Stok: 20
+					- Harga: Rp 120.000
+
+					Pisahkan setiap item dengan newline (\n) agar mudah dibaca di frontend.
+
+					Data produk:
+					%s
+
+					Data toko:
+					%s`, productsStr, shotpStr),
 	}
 
 	// Tambahkan system prompt ke awal
@@ -135,6 +169,9 @@ func (r *ChatRouter) MessageChat(c *gin.Context) {
 		return
 	}
 
+	// Ubah newline menjadi <br> sebelum dikirim ke frontend
+	formattedReply := strings.ReplaceAll(reply.Message, "\n", "<br>")
+
 	// Kirim ke client
-	response.Success(c, http.StatusOK, "Berhasil membalas pesan", reply.Message)
+	response.Success(c, http.StatusOK, "Berhasil membalas pesan", formattedReply)
 }

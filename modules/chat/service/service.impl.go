@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -135,12 +136,20 @@ func (s *ChatService) GetAllProductsAsString(ctx context.Context) (string, error
 		return "", err
 	}
 
-	var builder strings.Builder
-	for _, p := range products {
-		log.Println("Product value:", p.Name, p.Stock, p.Price)
+	productsJson, err := json.MarshalIndent(products, "", "  ")
+	// log.Println("Products JSON:", string(productsJson))
 
-		builder.WriteString(fmt.Sprintf("- %s (stok: %d, harga: Rp%d)\n", p.Name, p.Stock, p.Price))
+	return string(productsJson), nil
+}
+
+func (s *ChatService) GetAllShopsAsString(ctx context.Context) (string, error) {
+	shops, err := s.Queries.GetAllShops(ctx)
+
+	if err != nil {
+		return "", err
 	}
 
-	return builder.String(), nil
+	shopsJson, err := json.MarshalIndent(shops, "", "  ")
+
+	return string(shopsJson), nil
 }

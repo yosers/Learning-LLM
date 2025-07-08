@@ -14,4 +14,5 @@ type ChatServiceInterface interface {
 	SaveAssistantMessage(ctx context.Context, sessionID int32, content string) error
 	ChatCompletion(ctx context.Context, messages []model.ChatMessage) (model.ChatResponse, int, error)
 	GetAllProductsAsString(ctx context.Context) (string, error)
+	GetAllShopsAsString(ctx context.Context) (string, error)
 }

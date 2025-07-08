@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"shofy/modules/chat/model"
@@ -43,6 +44,7 @@ func (s *OpenAIService) ChatCompletion(ctx context.Context, messages []model.Cha
 
 	req, err := http.NewRequestWithContext(ctx, "POST", "https://api.deepinfra.com/v1/openai/chat/completions", bytes.NewBuffer(body))
 	if err != nil {
+		log.Println("Error creating request to DeepInfra:", err)
 		return model.ChatResponse{}, http.StatusInternalServerError, err
 	}
 	req.Header.Set("Authorization", "Bearer "+s.APIKey)
@@ -51,19 +53,25 @@ func (s *OpenAIService) ChatCompletion(ctx context.Context, messages []model.Cha
 	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Println("Error making request to DeepInfra:", err)
 		return model.ChatResponse{}, http.StatusInternalServerError, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		log.Println("DeepInfra API error:", resp.Status)
 		b, _ := io.ReadAll(resp.Body)
 		return model.ChatResponse{}, resp.StatusCode, fmt.Errorf("DeepInfra error: %s", b)
 	}
 
 	var parsed model.ChatCompletionResponse
 	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		log.Println("Error decoding DeepInfra response:", err)
 		return model.ChatResponse{}, http.StatusInternalServerError, err
 	}
+
+	log.Println("DeepInfra response:", parsed)
+	log.Println("DeepInfra response 2:", parsed.Choices[0].Message.Content)
 
 	response := model.ChatResponse{
 		Message:      parsed.Choices[0].Message.Content,

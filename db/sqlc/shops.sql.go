@@ -114,6 +114,51 @@ func (q *Queries) DeleteShopsById(ctx context.Context, id int32) error {
 	return err
 }
 
+const getAllShops = `-- name: GetAllShops :many
+SELECT s.id, s.name, s.description, s.logo_url, s.website_url, s.email, s.whatsapp_phone, s.address, s.city, s.state, s.zip_code, s.country, s.latitude, s.longitude, s.is_active, s.slug, s.created_at, s.updated_at FROM shops s 
+WHERE  s.is_active = true
+ORDER BY s.created_at DESC
+`
+
+func (q *Queries) GetAllShops(ctx context.Context) ([]Shop, error) {
+	rows, err := q.db.Query(ctx, getAllShops)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Shop
+	for rows.Next() {
+		var i Shop
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.LogoUrl,
+			&i.WebsiteUrl,
+			&i.Email,
+			&i.WhatsappPhone,
+			&i.Address,
+			&i.City,
+			&i.State,
+			&i.ZipCode,
+			&i.Country,
+			&i.Latitude,
+			&i.Longitude,
+			&i.IsActive,
+			&i.Slug,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getShopsById = `-- name: GetShopsById :one
 SELECT s.id, s.name, s.description, s.logo_url, s.website_url, s.email, s.whatsapp_phone, s.address, s.city, s.state, s.zip_code, s.country, s.latitude, s.longitude, s.is_active, s.slug, s.created_at, s.updated_at FROM shops s 
 WHERE s.id = $1 and s.is_active = true LIMIT 1
